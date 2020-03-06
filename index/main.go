@@ -1,48 +1,27 @@
 package main
 
 import (
+	files2 "com.github.senyast4745/index/files"
+	"com.github.senyast4745/index/util"
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 )
 
-const finalDataFile = "./final.json"
-
 func main() {
-	folderLocation := os.Args[1]
-	files, err := filePathWalkDir(folderLocation)
-	check(err, "error %e while reading files from directory")
-	m := make(map[string][]string)
-	for fn := range files {
-		if words, err := readFileByWords(files[fn]); err != nil {
-			fmt.Printf("error %e while reading data from file %s", err, files[fn])
-		} else {
-			for i := range words {
-				m[words[i]] = append(m[words[i]], files[fn])
-			}
-		}
+	if len(os.Args) < 2 {
+		fmt.Println("too few program arguments")
+		return
 	}
+
+	folderLocation := os.Args[1]
+
+	files, err := files2.FilePathWalkDir(folderLocation)
+	util.Check(err, "error %e while reading files from directory")
+	m := files2.CollectWordData(files)
 
 	js, err := json.Marshal(m)
-	check(err, "error %e while making json data")
-	check(writeDataToFile(string(js)), "error %e while saving data to file")
+	util.Check(err, "error %e while making json data")
+	util.Check(files2.WriteDataToFile(string(js)), "error %e while saving data to file")
 
-}
-
-func check(err error, format string) {
-	if err != nil {
-		fmt.Printf(format, err)
-	}
-}
-
-func filePathWalkDir(root string) ([]string, error) {
-	var files []string
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			files = append(files, path)
-		}
-		return nil
-	})
-	return files, err
 }
