@@ -1,1 +1,2 @@
-# search-senyast4745
+# Techopolis Golang homework
+Golang Open Source Homework Repository
