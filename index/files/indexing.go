@@ -1,28 +1,27 @@
-package main
+package files
 
 import (
 	"fmt"
 	"github.com/reiver/go-porterstemmer"
-	"github.com/senyast4745/index/files"
 	"github.com/senyast4745/index/util"
 	_vocabulary "github.com/senyast4745/index/vocabulary"
 	"strings"
 	"unicode"
 )
 
-func CreteIndex(folderLocation string) {
-	if allFiles, err := files.FilePathWalkDir(folderLocation); err != nil {
-		util.Check(err, "error %e while reading files from directory")
+func CreteIndex(folderLocation string) error {
+	if allFiles, err := FilePathWalkDir(folderLocation); err != nil {
+		return err
 	} else {
 		m := collectWordData(allFiles)
-		util.Check(files.CollectAndWriteMap(m), "error %e while saving data to file")
+		return CollectAndWriteMap(m)
 	}
 
 }
-func mapAndCleanWords(fileData []string, fn string) (map[string]*_vocabulary.WordStruct, error) {
+func mapAndCleanWords(fileData []string, fn string) (map[string]*WordStruct, error) {
 
 	var position int
-	data := make(map[string]*_vocabulary.WordStruct)
+	data := make(map[string]*WordStruct)
 	for i := range fileData {
 		word := strings.TrimFunc(fileData[i], func(r rune) bool {
 			return !unicode.IsLetter(r)
@@ -31,7 +30,7 @@ func mapAndCleanWords(fileData []string, fn string) (map[string]*_vocabulary.Wor
 			word = porterstemmer.StemString(word)
 
 			if data[word] == nil {
-				data[word] = &_vocabulary.WordStruct{File: fn, Position: []int{position}}
+				data[word] = &WordStruct{File: fn, Position: []int{position}}
 			} else {
 				data[word].Position = append(data[word].Position, position)
 			}
@@ -41,11 +40,11 @@ func mapAndCleanWords(fileData []string, fn string) (map[string]*_vocabulary.Wor
 	return data, nil
 }
 
-func collectWordData(fileNames []string) map[string][]*_vocabulary.WordStruct {
-	m := make(map[string][]*_vocabulary.WordStruct)
+func collectWordData(fileNames []string) map[string][]*WordStruct {
+	m := make(map[string][]*WordStruct)
 	for fn := range fileNames {
 
-		if words, err := files.ReadFileByWords(fileNames[fn]); err != nil {
+		if words, err := ReadFileByWords(fileNames[fn]); err != nil {
 			fmt.Printf("error %e while reading data from file %s", err, fileNames[fn])
 		} else {
 			data, err := mapAndCleanWords(words, fileNames[fn])
@@ -54,7 +53,7 @@ func collectWordData(fileNames []string) map[string][]*_vocabulary.WordStruct {
 			}
 			for i := range data {
 				if m[i] == nil {
-					m[i] = []*_vocabulary.WordStruct{data[i]}
+					m[i] = []*WordStruct{data[i]}
 				} else {
 					m[i] = append(m[i], data[i])
 				}
@@ -62,4 +61,9 @@ func collectWordData(fileNames []string) map[string][]*_vocabulary.WordStruct {
 		}
 	}
 	return m
+}
+
+type WordStruct struct {
+	File     string `json:"file"`
+	Position []int  `json:"position"`
 }
