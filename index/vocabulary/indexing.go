@@ -1,20 +1,27 @@
-package files
+package _vocabulary
 
 import (
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"github.com/reiver/go-porterstemmer"
+	"github.com/senyast4745/index/files"
 	"github.com/senyast4745/index/util"
-	_vocabulary "github.com/senyast4745/index/vocabulary"
+	"os"
 	"strings"
 	"unicode"
 )
 
-func CreteIndex(folderLocation string) error {
-	if allFiles, err := FilePathWalkDir(folderLocation); err != nil {
-		return err
+const finalDataFile = "../output/final.csv"
+
+const finalOutputDirectory = "../output"
+
+func CreteIndex(folderLocation string) {
+	if allFiles, err := files.FilePathWalkDir(folderLocation); err != nil {
+		util.Check(err, "error %e while reading files from directory")
 	} else {
 		m := collectWordData(allFiles)
-		return CollectAndWriteMap(m)
+		util.Check(CollectAndWriteMap(m), "error %e while saving data to file")
 	}
 
 }
@@ -26,7 +33,7 @@ func mapAndCleanWords(fileData []string, fn string) (map[string]*WordStruct, err
 		word := strings.TrimFunc(fileData[i], func(r rune) bool {
 			return !unicode.IsLetter(r)
 		})
-		if (!_vocabulary.EnglishStopWordChecker(word)) && (len(word) > 0) {
+		if (!EnglishStopWordChecker(word)) && (len(word) > 0) {
 			word = porterstemmer.StemString(word)
 
 			if data[word] == nil {
@@ -44,7 +51,7 @@ func collectWordData(fileNames []string) map[string][]*WordStruct {
 	m := make(map[string][]*WordStruct)
 	for fn := range fileNames {
 
-		if words, err := ReadFileByWords(fileNames[fn]); err != nil {
+		if words, err := files.ReadFileByWords(fileNames[fn]); err != nil {
 			fmt.Printf("error %e while reading data from file %s", err, fileNames[fn])
 		} else {
 			data, err := mapAndCleanWords(words, fileNames[fn])
@@ -64,6 +71,25 @@ func collectWordData(fileNames []string) map[string][]*WordStruct {
 }
 
 type WordStruct struct {
-	File     string `json:"file"`
-	Position []int  `json:"position"`
+	File     string
+	Position []int
+}
+
+func CollectAndWriteMap(m map[string][]*WordStruct) error {
+	if err := os.MkdirAll(finalOutputDirectory, 0777); err != nil {
+		return err
+	}
+	recordFile, _ := os.Create(finalDataFile)
+	w := csv.NewWriter(recordFile)
+	for k, v := range m {
+		t, err := json.Marshal(v)
+		if err != nil {
+			fmt.Printf("error %e while creating json from obj %+v \n", err, &v)
+		}
+		err = w.Write([]string{fmt.Sprintf("%s", k), fmt.Sprintf("%s", t)})
+		if err != nil {
+			fmt.Printf("error %e while saving record %s,%s \n", err, k, t)
+		}
+	}
+	return nil
 }

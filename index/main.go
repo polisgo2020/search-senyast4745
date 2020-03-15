@@ -2,8 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/senyast4745/index/files"
-	"github.com/senyast4745/index/util"
+	utilVocabulary "github.com/senyast4745/index/vocabulary"
 	"os"
 )
 
@@ -12,5 +11,5 @@ func main() {
 		fmt.Println("too few program arguments")
 		return
 	}
-	util.Check(files.CreteIndex(os.Args[1]), "error %e while creating index")
+	utilVocabulary.CreteIndex(os.Args[1])
 }
