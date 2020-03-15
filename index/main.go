@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	utilVocabulary "github.com/senyast4745/index/vocabulary"
 	"os"
 )
 
@@ -10,5 +11,5 @@ func main() {
 		fmt.Println("too few program arguments")
 		return
 	}
-	CreteIndex(os.Args[1])
+	utilVocabulary.CreteIndex(os.Args[1])
 }
