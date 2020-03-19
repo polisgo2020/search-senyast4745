@@ -1,6 +1,7 @@
 package index
 
 import (
+	"encoding/binary"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -12,9 +13,9 @@ import (
 	"unicode"
 )
 
-const finalDataFile = "../output/final.csv"
+const finalDataFile = "output/final.csv"
 
-const finalOutputDirectory = "../output"
+const finalOutputDirectory = "output"
 
 func CreteIndex(folderLocation string) {
 	if allFiles, err := files.FilePathWalkDir(folderLocation); err != nil {
@@ -25,10 +26,10 @@ func CreteIndex(folderLocation string) {
 	}
 
 }
-func mapAndCleanWords(fileData []string, fn string) (map[string]*WordStruct, error) {
+func mapAndCleanWords(fileData []string, fn string) (map[string]*files.FileStruct, error) {
 
 	var position int
-	data := make(map[string]*WordStruct)
+	data := make(map[string]*files.FileStruct)
 	for i := range fileData {
 		word := strings.TrimFunc(fileData[i], func(r rune) bool {
 			return !unicode.IsLetter(r)
@@ -37,7 +38,7 @@ func mapAndCleanWords(fileData []string, fn string) (map[string]*WordStruct, err
 			word = porterstemmer.StemString(word)
 
 			if data[word] == nil {
-				data[word] = &WordStruct{File: fn, Position: []int{position}}
+				data[word] = &files.FileStruct{File: fn, Position: []int{position}}
 			} else {
 				data[word].Position = append(data[word].Position, position)
 			}
@@ -47,8 +48,8 @@ func mapAndCleanWords(fileData []string, fn string) (map[string]*WordStruct, err
 	return data, nil
 }
 
-func collectWordData(fileNames []string) map[string][]*WordStruct {
-	m := make(map[string][]*WordStruct)
+func collectWordData(fileNames []string) map[string][]*files.FileStruct {
+	m := make(map[string][]*files.FileStruct)
 	for fn := range fileNames {
 
 		if words, err := files.ReadFileByWords(fileNames[fn]); err != nil {
@@ -60,7 +61,7 @@ func collectWordData(fileNames []string) map[string][]*WordStruct {
 			}
 			for i := range data {
 				if m[i] == nil {
-					m[i] = []*WordStruct{data[i]}
+					m[i] = []*files.FileStruct{data[i]}
 				} else {
 					m[i] = append(m[i], data[i])
 				}
@@ -70,25 +71,25 @@ func collectWordData(fileNames []string) map[string][]*WordStruct {
 	return m
 }
 
-type WordStruct struct {
-	File     string
-	Position []int
-}
-
-func CollectAndWriteMap(m map[string][]*WordStruct) error {
+func CollectAndWriteMap(m map[string][]*files.FileStruct) error {
 	if err := os.MkdirAll(finalOutputDirectory, 0777); err != nil {
 		return err
 	}
 	recordFile, _ := os.Create(finalDataFile)
 	w := csv.NewWriter(recordFile)
+	var count int
 	for k, v := range m {
 		t, err := json.Marshal(v)
 		if err != nil {
 			fmt.Printf("error %e while creating json from obj %+v \n", err, &v)
 		}
-		err = w.Write([]string{fmt.Sprintf("%s", k), fmt.Sprintf("%s", t)})
+		err = w.Write([]string{k, string(t)})
 		if err != nil {
 			fmt.Printf("error %e while saving record %s,%s \n", err, k, t)
+		}
+		count++
+		if count > 100 {
+			w.Flush()
 		}
 	}
 	return nil

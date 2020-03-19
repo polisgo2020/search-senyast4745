@@ -4,18 +4,22 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"github.com/polisgo2020/search-senyast4745/index"
 	"io"
 	"os"
 )
 
-func ReadCSVFile(filePath string) (map[string][]*index.FileStruct, error) {
+type FileStruct struct {
+	File     string `json:"file"`
+	Position []int  `json:"position"`
+}
+
+func ReadCSVFile(filePath string) (map[string][]*FileStruct, error) {
 	csvFile, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 	r := csv.NewReader(csvFile)
-	data := make(map[string][]*index.FileStruct)
+	data := make(map[string][]*FileStruct)
 	var errCount int
 	for {
 		record, err := r.Read()
@@ -30,7 +34,7 @@ func ReadCSVFile(filePath string) (map[string][]*index.FileStruct, error) {
 			}
 			continue
 		}
-		var tmp []*index.FileStruct
+		var tmp []*FileStruct
 		if json.Unmarshal([]byte(record[1]), &tmp) != nil {
 			fmt.Printf("error %e while parsing json data %s \n", err, record[1])
 			continue

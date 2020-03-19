@@ -9,7 +9,7 @@ import (
 func main() {
 	if len(os.Args) < 3 {
 		fmt.Println("too few arguments")
+		return
 	}
-	index.CreteIndex(os.Args[1])
 	index.SearchWordsInIndex(os.Args[1], os.Args[2:])
 }

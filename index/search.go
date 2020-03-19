@@ -13,11 +13,6 @@ type Data struct {
 	Path   int
 }
 
-type FileStruct struct {
-	File     string `json:"file"`
-	Position []int  `json:"position"`
-}
-
 func SearchWordsInIndex(filePath string, words []string) {
 	data, err := files.ReadCSVFile(filePath)
 	if err != nil {
@@ -28,12 +23,12 @@ func SearchWordsInIndex(filePath string, words []string) {
 	}
 }
 
-func getCorrectFiles(m map[string][]*FileStruct, searchWords []string) map[string]Data {
-	data := make(map[string][]*FileStruct)
+func getCorrectFiles(m map[string][]*files.FileStruct, searchWords []string) map[string]Data {
+	data := make(map[string][]*files.FileStruct)
 	for i := range searchWords {
 		data[searchWords[i]] = m[searchWords[i]]
 	}
-	a := make(map[string][]*FileStruct)
+	a := make(map[string][]*files.FileStruct)
 	for i := range data {
 		dataLen := len(data[i])
 		if 0 != dataLen {
@@ -44,7 +39,7 @@ func getCorrectFiles(m map[string][]*FileStruct, searchWords []string) map[strin
 }
 
 //sorting data by number of occurrences of words and distance between words in the source file
-func sortFiles(m map[string][]*FileStruct, searchWords []string) map[string]Data {
+func sortFiles(m map[string][]*files.FileStruct, searchWords []string) map[string]Data {
 	dataFirst := make(map[int]map[string]Data)
 	dataSecond := dataFirst
 	for i := range searchWords {
