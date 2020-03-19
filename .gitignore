@@ -1,4 +1,6 @@
-*
-output
 
+!files
+!index
+!make-index
+!search
 !**.(go|mod|sum)

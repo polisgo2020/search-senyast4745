@@ -1,12 +1,12 @@
-package _vocabulary
+package index
 
 import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"github.com/polisgo2020/search-senyast4745/files"
+	"github.com/polisgo2020/search-senyast4745/util"
 	"github.com/reiver/go-porterstemmer"
-	"github.com/senyast4745/index/files"
-	"github.com/senyast4745/index/util"
 	"os"
 	"strings"
 	"unicode"

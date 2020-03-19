@@ -1,4 +1,4 @@
-package _vocabulary
+package index
 
 import "strings"
 

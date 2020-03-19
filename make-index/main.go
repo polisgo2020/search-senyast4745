@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	utilVocabulary "github.com/senyast4745/index/vocabulary"
+	"github.com/polisgo2020/search-senyast4745/index"
 	"os"
 )
 
@@ -11,5 +11,5 @@ func main() {
 		fmt.Println("too few program arguments")
 		return
 	}
-	utilVocabulary.CreteIndex(os.Args[1])
+	index.CreteIndex(os.Args[1])
 }

@@ -7,3 +7,10 @@ func Check(err error, format string) {
 		fmt.Printf(format, err)
 	}
 }
+
+func Abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
