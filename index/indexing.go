@@ -1,7 +1,6 @@
 package index
 
 import (
-	"encoding/binary"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"

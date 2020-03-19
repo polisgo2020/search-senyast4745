@@ -1,10 +1,14 @@
 package index
 
 import (
+	"errors"
 	"fmt"
 	"github.com/polisgo2020/search-senyast4745/files"
 	"github.com/polisgo2020/search-senyast4745/util"
+	"github.com/reiver/go-porterstemmer"
 	"math"
+	"strings"
+	"unicode"
 )
 
 type Data struct {
@@ -14,12 +18,17 @@ type Data struct {
 }
 
 func SearchWordsInIndex(filePath string, words []string) {
-	data, err := files.ReadCSVFile(filePath)
-	if err != nil {
-		fmt.Printf("Couldn't open or read the csv file %s with error %e \n", filePath, err)
-	}
-	for k, v := range getCorrectFiles(data, words) {
-		fmt.Printf("Filename: %s, words count: %d, spacing between words in a file: %d \n", k, v.Path, v.Weight)
+	if inputWords, err := cleanUserInput(words); err != nil {
+		fmt.Printf("Error %e while cleaning user input", err)
+	} else {
+
+		data, err := files.ReadCSVFile(filePath)
+		if err != nil {
+			fmt.Printf("Couldn't open or read the csv file %s with error %e \n", filePath, err)
+		}
+		for k, v := range getCorrectFiles(data, inputWords) {
+			fmt.Printf("Filename: %s, words count: %d, spacing between words in a file: %d \n", k, v.Path, v.Weight)
+		}
 	}
 }
 
@@ -36,6 +45,22 @@ func getCorrectFiles(m map[string][]*files.FileStruct, searchWords []string) map
 		}
 	}
 	return sortFiles(a, searchWords)
+}
+
+func cleanUserInput(words []string) ([]string, error) {
+	var data []string
+	for _, v := range words {
+		word := strings.TrimFunc(v, func(r rune) bool {
+			return !unicode.IsLetter(r)
+		})
+		if (!EnglishStopWordChecker(word)) && (len(word) > 0) {
+			data = append(data, porterstemmer.StemString(word))
+		}
+	}
+	if len(data) == 0 {
+		return nil, errors.New("bad search words")
+	}
+	return data, nil
 }
 
 //sorting data by number of occurrences of words and distance between words in the source file
