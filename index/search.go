@@ -11,7 +11,7 @@ import (
 	"unicode"
 )
 
-type Data struct {
+type data struct {
 	file   string
 	Weight int
 	Path   int
@@ -32,7 +32,7 @@ func SearchWordsInIndex(filePath string, words []string) {
 	}
 }
 
-func getCorrectFiles(m map[string][]*files.FileStruct, searchWords []string) map[string]Data {
+func getCorrectFiles(m map[string][]*files.FileStruct, searchWords []string) map[string]data {
 	data := make(map[string][]*files.FileStruct)
 	for i := range searchWords {
 		data[searchWords[i]] = m[searchWords[i]]
@@ -64,30 +64,30 @@ func cleanUserInput(words []string) ([]string, error) {
 }
 
 //sorting data by number of occurrences of words and distance between words in the source file
-func sortFiles(m map[string][]*files.FileStruct, searchWords []string) map[string]Data {
-	dataFirst := make(map[int]map[string]Data)
+func sortFiles(m map[string][]*files.FileStruct, searchWords []string) map[string]data {
+	dataFirst := make(map[int]map[string]data)
 	dataSecond := dataFirst
 	for i := range searchWords {
 		for j := range m[searchWords[i]] {
 			for k := range m[searchWords[i]][j].Position {
 				minW := math.MaxInt64
 				if dataSecond[k] == nil {
-					dataSecond[k] = make(map[string]Data)
+					dataSecond[k] = make(map[string]data)
 				}
 				if _, ok := dataSecond[k][m[searchWords[i]][j].File]; !ok {
-					dataSecond[k][m[searchWords[i]][j].File] = Data{file: m[searchWords[i]][j].File}
+					dataSecond[k][m[searchWords[i]][j].File] = data{file: m[searchWords[i]][j].File}
 				}
 				for t := range dataFirst {
 					if dataFirst[t][m[searchWords[i]][j].File].Weight+util.Abs(t-m[searchWords[i]][j].Position[k]) < minW {
 						minW = dataFirst[t][m[searchWords[i]][j].File].Weight + util.Abs(t-m[searchWords[i]][j].Position[k])
-						dataSecond[t][m[searchWords[i]][j].File] = Data{file: m[searchWords[i]][j].File, Weight: minW,
+						dataSecond[t][m[searchWords[i]][j].File] = data{file: m[searchWords[i]][j].File, Weight: minW,
 							Path: dataFirst[t][m[searchWords[i]][j].File].Path + 1}
 					}
 				}
 			}
 		}
 	}
-	ans := make(map[string]Data)
+	ans := make(map[string]data)
 	for _, v := range dataFirst {
 		for k := range v {
 			ans[k] = v[k]
