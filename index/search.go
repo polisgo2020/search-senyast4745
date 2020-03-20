@@ -14,7 +14,7 @@ type Data struct {
 
 type Index map[string][]*files.FileStruct
 
-//sorting data by number of occurrences of words and distance between words in the source file
+// Search sorting Index data by number of occurrences of words and distance between words in the source file
 func (ind Index) Search(searchWords []string) map[string]Data {
 	dataFirst := make(map[int]map[string]Data)
 	dataSecond := dataFirst

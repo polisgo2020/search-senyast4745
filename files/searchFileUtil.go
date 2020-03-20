@@ -8,11 +8,13 @@ import (
 	"os"
 )
 
+// FileStruct file structure representing the position of a word in a file
 type FileStruct struct {
 	File     string `json:"file"`
 	Position []int  `json:"position"`
 }
 
+// ReadCSVFile reads a csv file at a given path and converts it to an Index structure
 func ReadCSVFile(filePath string) (map[string][]*FileStruct, error) {
 	csvFile, err := os.Open(filePath)
 	if err != nil {

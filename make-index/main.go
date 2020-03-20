@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"github.com/polisgo2020/search-senyast4745/files"
 	"github.com/polisgo2020/search-senyast4745/index"
@@ -13,20 +15,20 @@ func main() {
 		fmt.Println("too few program arguments")
 		return
 	}
-	CreteIndex(os.Args[1])
+	creteIndex(os.Args[1])
 }
 
-func CreteIndex(folderLocation string) {
+func creteIndex(folderLocation string) {
 	if allFiles, err := files.FilePathWalkDir(folderLocation); err != nil {
 		util.Check(err, "error %e while reading files from directory")
 	} else {
-		m := CollectWordData(allFiles)
-		util.Check(index.Index.CollectAndWriteMap(m), "error %e while saving data to file")
+		m := collectWordData(allFiles)
+		util.Check(collectAndWriteMap(m), "error %e while saving data to file")
 	}
 
 }
 
-func CollectWordData(fileNames []string) index.Index {
+func collectWordData(fileNames []string) index.Index {
 	m := make(index.Index)
 	for fn := range fileNames {
 
@@ -47,4 +49,28 @@ func CollectWordData(fileNames []string) index.Index {
 		}
 	}
 	return m
+}
+
+func collectAndWriteMap(ind index.Index) error {
+	if err := os.MkdirAll(files.FinalOutputDirectory, 0777); err != nil {
+		return err
+	}
+	recordFile, _ := os.Create(files.FinalDataFile)
+	w := csv.NewWriter(recordFile)
+	var count int
+	for k, v := range ind {
+		t, err := json.Marshal(v)
+		if err != nil {
+			fmt.Printf("error %e while creating json from obj %+v \n", err, &v)
+		}
+		err = w.Write([]string{k, string(t)})
+		if err != nil {
+			fmt.Printf("error %e while saving record %s,%s \n", err, k, t)
+		}
+		count++
+		if count > 100 {
+			w.Flush()
+		}
+	}
+	return nil
 }

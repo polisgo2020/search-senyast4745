@@ -9,12 +9,14 @@ import (
 	"unicode"
 )
 
+// Check checks for the existence of an error, and if any, displays the specified message in a standard stream
 func Check(err error, format string) {
 	if err != nil {
 		fmt.Printf(format, err)
 	}
 }
 
+// Abs takes a number x and returns its module
 func Abs(x int) int {
 	if x < 0 {
 		return -x
@@ -22,6 +24,7 @@ func Abs(x int) int {
 	return x
 }
 
+// CleanUserInput takes an array of words and formats it, removing the word stop and highlighting tokens
 func CleanUserInput(words []string) ([]string, error) {
 	var data []string
 	for _, v := range words {
