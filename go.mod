@@ -5,4 +5,5 @@ go 1.13
 require (
 	github.com/bbalet/stopwords v1.0.0
 	github.com/reiver/go-porterstemmer v1.0.1
+	github.com/urfave/cli/v2 v2.2.0
 )
