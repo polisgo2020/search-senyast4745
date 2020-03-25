@@ -1,6 +1,8 @@
 package index
 
 import (
+	"bufio"
+	"github.com/polisgo2020/search-senyast4745/util"
 	"github.com/reiver/go-porterstemmer"
 	"io"
 	"strings"
@@ -8,14 +10,20 @@ import (
 )
 
 // MapAndCleanWords creates an inverted index for a given word slice from a given file
-func MapAndCleanWords(reader io.Reader, fn string) (map[string]*FileStruct, error) {
+
+type FileWordMap map[string]*FileStruct
+
+func MapAndCleanWords(reader io.Reader, fn string) (FileWordMap, error) {
+	sc := bufio.NewScanner(reader)
+	sc.Split(bufio.ScanWords)
+
 	var position int
-	data := make(map[string]*FileStruct)
-	for i := range fileData {
-		word := strings.TrimFunc(fileData[i], func(r rune) bool {
+	data := make(FileWordMap)
+	for sc.Scan() {
+		word := strings.TrimFunc(sc.Text(), func(r rune) bool {
 			return !unicode.IsLetter(r)
 		})
-		if !EnglishStopWordChecker(word) {
+		if !util.EnglishStopWordChecker(word) {
 			word = porterstemmer.StemString(word)
 			if len(word) > 0 {
 				if data[word] == nil {

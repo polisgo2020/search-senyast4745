@@ -3,7 +3,6 @@ package util
 import (
 	"errors"
 	"fmt"
-	"github.com/polisgo2020/search-senyast4745/index"
 	"github.com/reiver/go-porterstemmer"
 	"strings"
 	"unicode"
@@ -31,7 +30,7 @@ func CleanUserInput(words []string) ([]string, error) {
 		word := strings.TrimFunc(v, func(r rune) bool {
 			return !unicode.IsLetter(r)
 		})
-		if !index.EnglishStopWordChecker(word) {
+		if !EnglishStopWordChecker(word) {
 			word = porterstemmer.StemString(word)
 			if len(word) > 0 {
 				data = append(data)

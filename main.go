@@ -1,18 +1,18 @@
 package main
 
 import (
-	"bufio"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"github.com/polisgo2020/search-senyast4745/index"
 	"github.com/polisgo2020/search-senyast4745/util"
+	"github.com/urfave/cli/v2"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/urfave/cli/v2"
+	"strings"
+	"sync"
 )
 
 func main() {
@@ -21,13 +21,21 @@ func main() {
 	app.Usage = "generate index from text files and search over them"
 
 	indexFileFlag := &cli.StringFlag{
-		Name:  "index, i",
-		Usage: "Index file",
+		Aliases: []string{"i"},
+		Name:    "index",
+		Usage:   "Index file",
 	}
 
 	sourcesFlag := &cli.StringFlag{
-		Name:  "sources, s",
-		Usage: "Files to index",
+		Aliases: []string{"s"},
+		Name:    "sources, s",
+		Usage:   "Files to index",
+	}
+
+	searchFlag := &cli.StringFlag{
+		Aliases: []string{"sw"},
+		Name:    "search-word, sw",
+		Usage:   "Search words",
 	}
 
 	app.Commands = []*cli.Command{
@@ -47,6 +55,7 @@ func main() {
 			Usage:   "Search over the index",
 			Flags: []cli.Flag{
 				indexFileFlag,
+				searchFlag,
 			},
 			Action: search,
 		},
@@ -58,32 +67,40 @@ func main() {
 	}
 }
 
-func creteIndex(folderLocation string) {
-	if allFiles, err := FilePathWalkDir(folderLocation); err != nil {
+func build(c *cli.Context) error {
+	if allFiles, err := filePathWalkDir(c.String("sources")); err != nil {
 		util.Check(err, "error %e while reading files from directory")
 	} else {
 		m := collectWordData(allFiles)
-		util.Check(collectAndWriteMap(m), "error %e while saving data to file")
+		util.Check(collectAndWriteMap(m, c.String("index")), "error %e while saving data to file")
 	}
-
+	return nil
 }
 
 func collectWordData(fileNames []string) *index.Index {
 	m := index.NewIndex()
-	for fn := range fileNames {
+	var wg sync.WaitGroup
+	for i := range fileNames {
+		wg.Add(1)
+		go readFileByWords(&wg, m.DataChannel, fileNames[i])
+	}
 
-		if words, err := ReadFileByWords(fileNames[fn]); err != nil {
-			fmt.Printf("error %e while reading data from file %s", err, fileNames[fn])
-		} else {
-			data, err := index.MapAndCleanWords(words, fileNames[fn])
-			if err != nil {
-				util.Check(err, "error %e")
+	go func(wg *sync.WaitGroup, readChan chan index.FileWordMap) {
+		wg.Wait()
+		close(readChan)
+	}(&wg, m.DataChannel)
+ReadLoop:
+	for {
+		select {
+		case data, ok := <-m.DataChannel:
+			if !ok {
+				break ReadLoop
 			}
-			for i := range data {
-				if m.Data[i] == nil {
-					m.Data[i] = []*index.FileStruct{data[i]}
+			for j := range data {
+				if m.Data[j] == nil {
+					m.Data[j] = []*index.FileStruct{data[j]}
 				} else {
-					m.Data[i] = append(m.Data[i], data[i])
+					m.Data[j] = append(m.Data[j], data[j])
 				}
 			}
 		}
@@ -91,11 +108,8 @@ func collectWordData(fileNames []string) *index.Index {
 	return m
 }
 
-func collectAndWriteMap(ind index.Index) error {
-	if err := os.MkdirAll(FinalOutputDirectory, 0777); err != nil {
-		return err
-	}
-	recordFile, _ := os.Create(FinalDataFile)
+func collectAndWriteMap(ind *index.Index, indexFile string) error {
+	recordFile, _ := os.Create(indexFile)
 	w := csv.NewWriter(recordFile)
 	var count int
 	for k, v := range ind.Data {
@@ -115,19 +129,20 @@ func collectAndWriteMap(ind index.Index) error {
 	return nil
 }
 
-func searchWordsInIndex(filePath string, words []string) {
-	if inputWords, err := util.CleanUserInput(words); err != nil {
+func search(c *cli.Context) error {
+	if inputWords, err := util.CleanUserInput(strings.Split(c.String("search-word"), ",")); err != nil {
 		fmt.Printf("Error %e while cleaning user input", err)
 	} else {
-
-		data, err := ReadCSVFile(filePath)
+		data, err := readCSVFile(c.String("index"))
 		if err != nil {
-			fmt.Printf("Couldn't open or read the csv file %s with error %e \n", filePath, err)
+			fmt.Printf("Couldn't open or read the csv file %s with error %e \n", c.String("path"), err)
 		}
 		for k, v := range getCorrectFiles(data, inputWords) {
 			fmt.Printf("Filename: %s, words count: %d, spacing between words in a file: %d \n", k, v.Path, v.Weight)
 		}
+
 	}
+	return nil
 }
 
 func getCorrectFiles(m *index.Index, searchWords []string) map[string]*index.Data {
@@ -141,13 +156,13 @@ func getCorrectFiles(m *index.Index, searchWords []string) map[string]*index.Dat
 	return data.Search(searchWords)
 }
 
-func ReadCSVFile(filePath string) (map[string][]*index.FileStruct, error) {
+func readCSVFile(filePath string) (*index.Index, error) {
 	csvFile, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 	r := csv.NewReader(csvFile)
-	data := make(map[string][]*index.FileStruct)
+	data := index.NewIndex()
 	var errCount int
 	for {
 		record, err := r.Read()
@@ -167,18 +182,14 @@ func ReadCSVFile(filePath string) (map[string][]*index.FileStruct, error) {
 			fmt.Printf("error %e while parsing json data %s \n", err, record[1])
 			continue
 		}
-		data[record[0]] = tmp
+		data.Data[record[0]] = tmp
 	}
 	return data, nil
 }
 
-const FinalDataFile = "output/final.csv"
-
-const FinalOutputDirectory = "output"
-
 // FilePathWalkDir bypasses the given director and returns a list of all files in this folder
-// and returns an error if it is not possible to access the folde
-func FilePathWalkDir(root string) ([]string, error) {
+// and returns an error if it is not possible to access the folder
+func filePathWalkDir(root string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
@@ -190,23 +201,19 @@ func FilePathWalkDir(root string) ([]string, error) {
 }
 
 // ReadFileByWords reads the given file by words and returns an array of the layer or an error if it is impossible to open or read the file
-func ReadFileByWords(fn string) ([]string, error) {
-
+func readFileByWords(wg *sync.WaitGroup, outputCh chan<- index.FileWordMap, fn string) {
 	file, err := os.Open(fn)
 	if err != nil {
-		return nil, err
+		return
 	}
 	//noinspection GoUnhandledErrorResult
 	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	scanner.Split(bufio.ScanWords)
+	defer wg.Done()
 
-	var data []string
-	for scanner.Scan() {
-		data = append(data, scanner.Text())
+	if wordMap, err := index.MapAndCleanWords(file, fn); err != nil {
+		fmt.Printf("error %e while indexing file %s", err, fn)
+	} else {
+		outputCh <- wordMap
 	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return data, nil
+	return
 }

@@ -17,11 +17,12 @@ type FileStruct struct {
 }
 
 type Index struct {
-	Data map[string][]*FileStruct
+	Data        map[string][]*FileStruct
+	DataChannel chan FileWordMap
 }
 
 func NewIndex() *Index {
-	return &Index{Data: make(map[string][]*FileStruct)}
+	return &Index{Data: make(map[string][]*FileStruct), DataChannel: make(chan FileWordMap, 1000)}
 }
 
 // Search sorting Index data by number of occurrences of words and distance between words in the source file
