@@ -3,9 +3,10 @@ package util
 import (
 	"errors"
 	"fmt"
-	"github.com/reiver/go-porterstemmer"
 	"strings"
 	"unicode"
+
+	"github.com/reiver/go-porterstemmer"
 )
 
 // Check checks for the existence of an error, and if any, displays the specified message in a standard stream

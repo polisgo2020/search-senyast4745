@@ -2,11 +2,12 @@ package index
 
 import (
 	"bufio"
-	"github.com/polisgo2020/search-senyast4745/util"
-	"github.com/reiver/go-porterstemmer"
 	"io"
 	"strings"
 	"unicode"
+
+	"github.com/polisgo2020/search-senyast4745/util"
+	"github.com/reiver/go-porterstemmer"
 )
 
 // MapAndCleanWords creates an inverted index for a given word slice from a given file

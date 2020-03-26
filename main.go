@@ -4,15 +4,16 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"github.com/polisgo2020/search-senyast4745/index"
-	"github.com/polisgo2020/search-senyast4745/util"
-	"github.com/urfave/cli/v2"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/polisgo2020/search-senyast4745/index"
+	"github.com/polisgo2020/search-senyast4745/util"
+	"github.com/urfave/cli/v2"
 )
 
 func main() {
