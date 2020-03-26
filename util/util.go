@@ -33,7 +33,7 @@ func CleanUserInput(words []string) ([]string, error) {
 		if !EnglishStopWordChecker(word) {
 			word = porterstemmer.StemString(word)
 			if len(word) > 0 {
-				data = append(data)
+				data = append(data, word)
 			}
 		}
 	}

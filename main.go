@@ -35,7 +35,7 @@ func main() {
 	searchFlag := &cli.StringFlag{
 		Aliases: []string{"sw"},
 		Name:    "search-word, sw",
-		Usage:   "Search words",
+		Usage:   "Search words separated by comma",
 	}
 
 	app.Commands = []*cli.Command{
