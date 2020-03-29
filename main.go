@@ -85,14 +85,14 @@ func build(c *cli.Context) error {
 
 func collectWordData(fileNames []string) *index.Index {
 	m := index.NewIndex()
-	m.OpenChannel()
-	var wg sync.WaitGroup
-	for i := range fileNames {
-		wg.Add(1)
-		go readFileByWords(&wg, m, fileNames[i])
-	}
 
-	m.Listen(&wg)
+	m.OpenApplyAndListenChannel(func(wg *sync.WaitGroup) {
+
+		for i := range fileNames {
+			wg.Add(1)
+			go readFileByWords(wg, m, fileNames[i])
+		}
+	})
 
 	return m
 }

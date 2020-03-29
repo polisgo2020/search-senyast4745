@@ -27,15 +27,15 @@ func NewIndex() *Index {
 	return &Index{Data: make(map[string][]*FileStruct)}
 }
 
-func (ind *Index) OpenChannel() {
+func (ind *Index) OpenApplyAndListenChannel(consumer func(wg *sync.WaitGroup)) {
 	ind.dataChannel = make(chan FileWordMap, 1000)
-}
+	var wg sync.WaitGroup
+	consumer(&wg)
 
-func (ind *Index) Listen(wg *sync.WaitGroup) {
 	go func(wg *sync.WaitGroup, readChan chan FileWordMap) {
 		wg.Wait()
 		close(readChan)
-	}(wg, ind.dataChannel)
+	}(&wg, ind.dataChannel)
 
 	for data := range ind.dataChannel {
 		for j := range data {
