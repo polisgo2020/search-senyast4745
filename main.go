@@ -5,15 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/polisgo2020/search-senyast4745/index"
-	"github.com/polisgo2020/search-senyast4745/util"
-	"github.com/urfave/cli/v2"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/polisgo2020/search-senyast4745/index"
+	"github.com/polisgo2020/search-senyast4745/util"
+	"github.com/urfave/cli/v2"
 )
 
 func main() {
@@ -36,7 +37,7 @@ func main() {
 	searchFlag := &cli.StringFlag{
 		Aliases: []string{"sw"},
 		Name:    "search-word, sw",
-		Usage:   "Search words",
+		Usage:   "Search words separated by comma",
 	}
 
 	app.Commands = []*cli.Command{
