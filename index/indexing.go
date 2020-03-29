@@ -2,8 +2,9 @@ package index
 
 import (
 	"bufio"
-	"github.com/polisgo2020/search-senyast4745/util"
 	"io"
+
+	"github.com/polisgo2020/search-senyast4745/util"
 )
 
 type FileWordMap map[string]*FileStruct
