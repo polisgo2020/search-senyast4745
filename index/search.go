@@ -2,6 +2,7 @@ package index
 
 import (
 	"math"
+	"sync"
 
 	"github.com/polisgo2020/search-senyast4745/util"
 )
@@ -19,15 +20,36 @@ type FileStruct struct {
 
 type Index struct {
 	Data        map[string][]*FileStruct
-	DataChannel chan FileWordMap
+	dataChannel chan FileWordMap
 }
 
 func NewIndex() *Index {
-	return &Index{Data: make(map[string][]*FileStruct), DataChannel: make(chan FileWordMap, 1000)}
+	return &Index{Data: make(map[string][]*FileStruct)}
+}
+
+func (ind *Index) OpenChannel() {
+	ind.dataChannel = make(chan FileWordMap, 1000)
+}
+
+func (ind *Index) Listen(wg *sync.WaitGroup) {
+	go func(wg *sync.WaitGroup, readChan chan FileWordMap) {
+		wg.Wait()
+		close(readChan)
+	}(wg, ind.dataChannel)
+
+	for data := range ind.dataChannel {
+		for j := range data {
+			if ind.Data[j] == nil {
+				ind.Data[j] = []*FileStruct{data[j]}
+			} else {
+				ind.Data[j] = append(ind.Data[j], data[j])
+			}
+		}
+	}
 }
 
 // Search sorting Index data by number of occurrences of words and distance between words in the source file
-func (ind Index) Search(searchWords []string) map[string]*Data {
+func (ind *Index) Search(searchWords []string) map[string]*Data {
 	dataFirst := make(map[int]map[string]*Data)
 	dataSecond := dataFirst
 	for i := range searchWords {

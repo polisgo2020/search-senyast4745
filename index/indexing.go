@@ -10,7 +10,7 @@ import (
 type FileWordMap map[string]*FileStruct
 
 // MapAndCleanWords creates an inverted index for a given word slice from a given file
-func MapAndCleanWords(reader io.Reader, fn string) (FileWordMap, error) {
+func (ind *Index) MapAndCleanWords(reader io.Reader, fn string) {
 	sc := bufio.NewScanner(reader)
 	sc.Split(bufio.ScanWords)
 
@@ -26,5 +26,5 @@ func MapAndCleanWords(reader io.Reader, fn string) (FileWordMap, error) {
 			position++
 		})
 	}
-	return data, nil
+	ind.dataChannel <- data
 }

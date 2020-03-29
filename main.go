@@ -85,25 +85,14 @@ func build(c *cli.Context) error {
 
 func collectWordData(fileNames []string) *index.Index {
 	m := index.NewIndex()
+	m.OpenChannel()
 	var wg sync.WaitGroup
 	for i := range fileNames {
 		wg.Add(1)
-		go readFileByWords(&wg, m.DataChannel, fileNames[i])
+		go readFileByWords(&wg, m, fileNames[i])
 	}
 
-	go func(wg *sync.WaitGroup, readChan chan index.FileWordMap) {
-		wg.Wait()
-		close(readChan)
-	}(&wg, m.DataChannel)
-	for data := range m.DataChannel {
-		for j := range data {
-			if m.Data[j] == nil {
-				m.Data[j] = []*index.FileStruct{data[j]}
-			} else {
-				m.Data[j] = append(m.Data[j], data[j])
-			}
-		}
-	}
+	m.Listen(&wg)
 
 	return m
 }
@@ -215,7 +204,7 @@ func filePathWalkDir(root string) ([]string, error) {
 
 // ReadFileByWords reads the given file by words and returns an array of the layer
 //or an error if it is impossible to open or read the file
-func readFileByWords(wg *sync.WaitGroup, outputCh chan<- index.FileWordMap, fn string) {
+func readFileByWords(wg *sync.WaitGroup, ind *index.Index, fn string) {
 	defer wg.Done()
 	file, err := os.Open(fn)
 	if err != nil {
@@ -225,11 +214,7 @@ func readFileByWords(wg *sync.WaitGroup, outputCh chan<- index.FileWordMap, fn s
 	//noinspection GoUnhandledErrorResult
 	defer file.Close()
 
-	if wordMap, err := index.MapAndCleanWords(file, fn); err != nil {
-		fmt.Printf("error %e while indexing file %s", err, fn)
-	} else {
-		outputCh <- wordMap
-	}
+	ind.MapAndCleanWords(file, fn)
 	return
 }
 

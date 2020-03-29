@@ -12,6 +12,6 @@ build:
 	$(GOBUILD) -o $(BINARY_NAME) main.go
 
 test:
-	mkdir $(OUTPUT_FOLDER)
+	mkdir -p $(OUTPUT_FOLDER)
 	$(BINARY_NAME) build --sources $(DATA_FOLDER) $(INDEX_FLAG)
 	$(BINARY_NAME) search $(INDEX_FLAG) --search-word hello,world
