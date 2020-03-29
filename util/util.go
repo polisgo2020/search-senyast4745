@@ -1,7 +1,6 @@
 package util
 
 import (
-	"errors"
 	"fmt"
 	"github.com/reiver/go-porterstemmer"
 	"strings"
@@ -24,21 +23,14 @@ func Abs(x int) int {
 }
 
 // CleanUserInput takes an array of words and formats it, removing the word stop and highlighting tokens
-func CleanUserInput(words []string) ([]string, error) {
-	var data []string
-	for _, v := range words {
-		word := strings.TrimFunc(v, func(r rune) bool {
-			return !unicode.IsLetter(r)
-		})
-		if !EnglishStopWordChecker(word) {
-			word = porterstemmer.StemString(word)
-			if len(word) > 0 {
-				data = append(data)
-			}
+func CleanUserInput(word string, consumer func(input string)) {
+	word = strings.TrimFunc(word, func(r rune) bool {
+		return !unicode.IsLetter(r)
+	})
+	if !EnglishStopWordChecker(word) {
+		word = porterstemmer.StemString(word)
+		if len(word) > 0 {
+			consumer(word)
 		}
 	}
-	if len(data) == 0 {
-		return nil, errors.New(fmt.Sprintf("bad search words %+v", words))
-	}
-	return data, nil
 }

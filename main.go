@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/polisgo2020/search-senyast4745/index"
 	"github.com/polisgo2020/search-senyast4745/util"
@@ -68,6 +69,10 @@ func main() {
 }
 
 func build(c *cli.Context) error {
+	if err := checkFlags(c, "index", "sources"); err != nil {
+		fmt.Printf("Error %e while checking context", err)
+		return nil
+	}
 	if allFiles, err := filePathWalkDir(c.String("sources")); err != nil {
 		util.Check(err, "error %e while reading files from directory")
 	} else {
@@ -89,22 +94,16 @@ func collectWordData(fileNames []string) *index.Index {
 		wg.Wait()
 		close(readChan)
 	}(&wg, m.DataChannel)
-ReadLoop:
-	for {
-		select {
-		case data, ok := <-m.DataChannel:
-			if !ok {
-				break ReadLoop
-			}
-			for j := range data {
-				if m.Data[j] == nil {
-					m.Data[j] = []*index.FileStruct{data[j]}
-				} else {
-					m.Data[j] = append(m.Data[j], data[j])
-				}
+	for data := range m.DataChannel {
+		for j := range data {
+			if m.Data[j] == nil {
+				m.Data[j] = []*index.FileStruct{data[j]}
+			} else {
+				m.Data[j] = append(m.Data[j], data[j])
 			}
 		}
 	}
+
 	return m
 }
 
@@ -130,18 +129,31 @@ func collectAndWriteMap(ind *index.Index, indexFile string) error {
 }
 
 func search(c *cli.Context) error {
-	if inputWords, err := util.CleanUserInput(strings.Split(c.String("search-word"), ",")); err != nil {
-		fmt.Printf("Error %e while cleaning user input", err)
-	} else {
-		data, err := readCSVFile(c.String("index"))
-		if err != nil {
-			fmt.Printf("Couldn't open or read the csv file %s with error %e \n", c.String("path"), err)
-		}
-		for k, v := range getCorrectFiles(data, inputWords) {
-			fmt.Printf("Filename: %s, words count: %d, spacing between words in a file: %d \n", k, v.Path, v.Weight)
-		}
-
+	if err := checkFlags(c, "index", "search-word"); err != nil {
+		fmt.Printf("Error %e while checking context", err)
+		return nil
 	}
+
+	inputWords := make([]string, 0)
+	for _, word := range strings.Split(c.String("search-word"), ",") {
+		util.CleanUserInput(word, func(input string) {
+			inputWords = append(inputWords, input)
+		})
+	}
+
+	if len(inputWords) == 0 {
+		fmt.Printf("Incorrect search words")
+		return nil
+	}
+
+	data, err := readCSVFile(c.String("index"))
+	if err != nil {
+		fmt.Printf("Couldn't open or read the csv file %s with error %e \n", c.String("path"), err)
+	}
+	for k, v := range getCorrectFiles(data, inputWords) {
+		fmt.Printf("Filename: %s, words count: %d, spacing between words in a file: %d \n", k, v.Path, v.Weight)
+	}
+
 	return nil
 }
 
@@ -200,15 +212,17 @@ func filePathWalkDir(root string) ([]string, error) {
 	return files, err
 }
 
-// ReadFileByWords reads the given file by words and returns an array of the layer or an error if it is impossible to open or read the file
+// ReadFileByWords reads the given file by words and returns an array of the layer
+//or an error if it is impossible to open or read the file
 func readFileByWords(wg *sync.WaitGroup, outputCh chan<- index.FileWordMap, fn string) {
+	defer wg.Done()
 	file, err := os.Open(fn)
 	if err != nil {
+		fmt.Printf("Error %e while openig file %s", err, fn)
 		return
 	}
 	//noinspection GoUnhandledErrorResult
 	defer file.Close()
-	defer wg.Done()
 
 	if wordMap, err := index.MapAndCleanWords(file, fn); err != nil {
 		fmt.Printf("error %e while indexing file %s", err, fn)
@@ -216,4 +230,13 @@ func readFileByWords(wg *sync.WaitGroup, outputCh chan<- index.FileWordMap, fn s
 		outputCh <- wordMap
 	}
 	return
+}
+
+func checkFlags(c *cli.Context, str ...string) error {
+	for _, flag := range str {
+		if c.String(flag) == "" {
+			return errors.New(fmt.Sprintf("empty flag %s", flag))
+		}
+	}
+	return nil
 }
