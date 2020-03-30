@@ -5,39 +5,72 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
+
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/polisgo2020/search-senyast4745/index"
 	"github.com/polisgo2020/search-senyast4745/util"
 	"github.com/urfave/cli/v2"
 )
 
+var logger log.Logger
+var errLogger log.Logger
+
 func main() {
+
+	//os.Mkdir("logs")
+
+	fmt.Print("    ___ _   ___     ______  _____    _    ____   ____ _   _\n" +
+		"   |_ _| \\ | \\ \\   / / ___|| ____|  / \\  |  _ \\ / ___| | | |\n" +
+		"    | ||  \\| |\\ \\ / /\\___ \\|  _|   / _ \\ | |_) | |   | |_| |\n" +
+		"    | || |\\  | \\ V /  ___) | |___ / ___ \\|  _ <| |___|  _  |\n" +
+		"   |___|_| \\_|  \\_/  |____/|_____/_/   \\_\\_| \\_\\\\____|_| |_|\n\n")
+
 	app := cli.NewApp()
+
+	app.Version = "0.0.1"
+	app.Authors = []*cli.Author{{Name: "Arseny Druzhinin", Email: "senyasdt4745@gmail.com"}}
 	app.Name = "Search index"
 	app.Usage = "generate index from text files and search over them"
 
 	indexFileFlag := &cli.StringFlag{
-		Aliases: []string{"i"},
-		Name:    "index",
-		Usage:   "Index file",
+		Aliases:     []string{"i"},
+		Name:        "index",
+		Usage:       "Index file",
+		DefaultText: "output/final.csv",
 	}
 
 	sourcesFlag := &cli.StringFlag{
-		Aliases: []string{"s"},
-		Name:    "sources, s",
-		Usage:   "Files to index",
+		Aliases:  []string{"s"},
+		Name:     "sources, s",
+		Usage:    "Files to index",
+		Required: true,
 	}
 
 	searchFlag := &cli.StringFlag{
-		Aliases: []string{"sw"},
-		Name:    "search-word, sw",
-		Usage:   "Search words separated by comma",
+		Aliases:  []string{"sw"},
+		Name:     "search-word, sw",
+		Usage:    "Search words separated by comma",
+		Required: true,
+	}
+
+	logFolderFlag := &cli.BoolFlag{
+		Name:  "log",
+		Usage: "Turn on logging to files",
+	}
+
+	debugFlag := &cli.BoolFlag{
+		Name:    "debug",
+		Aliases: []string{"d"},
+		Usage:   "Turn on debug mode",
 	}
 
 	app.Commands = []*cli.Command{
@@ -48,6 +81,8 @@ func main() {
 			Flags: []cli.Flag{
 				indexFileFlag,
 				sourcesFlag,
+				debugFlag,
+				logFolderFlag,
 			},
 			Action: build,
 		},
@@ -58,6 +93,8 @@ func main() {
 			Flags: []cli.Flag{
 				indexFileFlag,
 				searchFlag,
+				debugFlag,
+				logFolderFlag,
 			},
 			Action: search,
 		},
@@ -65,21 +102,42 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Fatal with %e error while starting command line app", err)
 	}
 }
 
 func build(c *cli.Context) error {
+
+	initializeLoggers(c)
+
+	logger = log.With(logger, "command", "build")
+	errLogger = log.With(errLogger, "command", "build")
+
+	level.Debug(logger).Log("msg", "build run", "index file", c.String("index"),
+		"source folder", c.String("sources"))
 	if err := checkFlags(c, "index", "sources"); err != nil {
-		fmt.Printf("Error %e while checking context", err)
+		level.Error(errLogger).Log("error", err, "context flags", c.FlagNames(),
+			"msg", "error while checking context")
 		return nil
 	}
 	if allFiles, err := filePathWalkDir(c.String("sources")); err != nil {
-		util.Check(err, "error %e while reading files from directory")
+		level.Error(errLogger).Log("error", err,
+			"msg", fmt.Sprintf("can not read files list from directory: %s", c.String("sources")))
 	} else {
+		level.Debug(logger).Log("msg", "folder parsed", "files", fmt.Sprintf("%+v", allFiles))
+
 		m := collectWordData(allFiles)
-		util.Check(collectAndWriteMap(m, c.String("index")), "error %e while saving data to file")
+
+		level.Debug(logger).Log("msg", "index built")
+		if err := collectAndWriteMap(m, c.String("index")); err != nil {
+			level.Error(errLogger).Log("error", err,
+				"msg", fmt.Sprintf("can not save data to file with name: %s", c.String("index")))
+			return nil
+		} else {
+			level.Debug(logger).Log("msg", "index saved")
+		}
 	}
+
 	return nil
 }
 
@@ -92,35 +150,53 @@ func collectWordData(fileNames []string) *index.Index {
 			wg.Add(1)
 			go readFileByWords(wg, m, fileNames[i])
 		}
+		level.Debug(logger).Log("msg", fmt.Sprintf("goroutine count %d", len(fileNames)))
 	})
 
 	return m
 }
 
 func collectAndWriteMap(ind *index.Index, indexFile string) error {
+	level.Debug(logger).Log("msg", "writing index to file in csv format", "file", indexFile, "index", ind,
+		"index length", len(ind.Data))
 	recordFile, _ := os.Create(indexFile)
 	w := csv.NewWriter(recordFile)
 	var count int
 	for k, v := range ind.Data {
 		t, err := json.Marshal(v)
 		if err != nil {
-			fmt.Printf("error %e while creating json from obj %+v \n", err, &v)
+			level.Error(errLogger).Log("error", err,
+				"msg", fmt.Sprintf("can not create json from obj %+v \n", &v), "obj", &v)
 		}
 		err = w.Write([]string{k, string(t)})
 		if err != nil {
-			fmt.Printf("error %e while saving record %s,%s \n", err, k, t)
+			level.Error(errLogger).Log("error", err,
+				"msg", fmt.Sprintf("can not save record %s,%s \n", k, t), "file", indexFile, "word", k,
+				"filestr", string(t))
 		}
 		count++
-		if count > 100 {
+		if count > 10 {
 			w.Flush()
+			level.Debug(logger).Log("msg", "flush writer", "writer", w)
+			count = 0
 		}
 	}
 	return nil
 }
 
 func search(c *cli.Context) error {
+
+	initializeLoggers(c)
+
+	logger = log.With(logger, "command", "search")
+	errLogger = log.With(errLogger, "command", "search")
+
+	level.Debug(logger).Log("msg", "build run", "index file", c.String("index"),
+		"search words", c.String("search-word"))
+
 	if err := checkFlags(c, "index", "search-word"); err != nil {
-		fmt.Printf("Error %e while checking context", err)
+		level.Error(errLogger).Log("error", err, "context flags", c.FlagNames(),
+			"msg", "error while checking context")
 		return nil
 	}
 
@@ -132,16 +208,19 @@ func search(c *cli.Context) error {
 	}
 
 	if len(inputWords) == 0 {
-		fmt.Printf("Incorrect search words")
+		level.Error(errLogger).Log("error", nil,
+			"msg", "Incorrect search words", "input", c.String("search-words"))
 		return nil
 	}
 
 	data, err := readCSVFile(c.String("index"))
 	if err != nil {
-		fmt.Printf("Couldn't open or read the csv file %s with error %e \n", c.String("path"), err)
+		level.Error(errLogger).Log("error", err,
+			"msg", fmt.Sprintf("Couldn't open or read the csv file %s", c.String("path")))
 	}
 	for k, v := range getCorrectFiles(data, inputWords) {
-		fmt.Printf("Filename: %s, words count: %d, spacing between words in a file: %d \n", k, v.Path, v.Weight)
+		level.Info(logger).Log(
+			"filename", k, "count", v.Path, "spacing", v.Weight, "msg", "result")
 	}
 
 	return nil
@@ -155,6 +234,7 @@ func getCorrectFiles(m *index.Index, searchWords []string) map[string]*index.Dat
 			data.Data[searchWords[i]] = tmp
 		}
 	}
+	level.Debug(logger).Log("msg", "start search in index")
 	return data.Search(searchWords)
 }
 
@@ -172,16 +252,19 @@ func readCSVFile(filePath string) (*index.Index, error) {
 			break
 		}
 		if err != nil {
-			fmt.Printf("error %e while readind csv line \n", err)
+			level.Error(errLogger).Log("error", err,
+				"msg", "can not read csv line")
 			errCount++
 			if errCount > 100 {
 				return nil, err
 			}
 			continue
 		}
+		level.Debug(logger).Log("msg", "reading data from csv", "data", record)
 		var tmp []*index.FileStruct
 		if json.Unmarshal([]byte(record[1]), &tmp) != nil {
-			fmt.Printf("error %e while parsing json data %s \n", err, record[1])
+			level.Error(errLogger).Log("error", err,
+				"msg", fmt.Sprintf("can not parse json data %s \n", record[1]), "data", record[1])
 			continue
 		}
 		data.Data[record[0]] = tmp
@@ -194,6 +277,9 @@ func readCSVFile(filePath string) (*index.Index, error) {
 func filePathWalkDir(root string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if info == nil {
+			return errors.New("")
+		}
 		if !info.IsDir() {
 			files = append(files, path)
 		}
@@ -206,16 +292,26 @@ func filePathWalkDir(root string) ([]string, error) {
 //or an error if it is impossible to open or read the file
 func readFileByWords(wg *sync.WaitGroup, ind *index.Index, fn string) {
 	defer wg.Done()
+	level.Debug(logger).Log("msg", "goroutine start", "filename", fn, "goroutine id", goid())
 	file, err := os.Open(fn)
 	if err != nil {
-		fmt.Printf("Error %e while openig file %s", err, fn)
+		level.Error(errLogger).Log("error", err,
+			"msg", fmt.Sprintf("can not open file %s", fn), "filename", fn)
 		return
 	}
 	//noinspection GoUnhandledErrorResult
 	defer file.Close()
 
 	ind.MapAndCleanWords(file, fn)
+	level.Debug(logger).Log("msg", "goroutine normal end", "goroutine id", goid())
 	return
+}
+
+func goid() string {
+	var buf [64]byte
+	n := runtime.Stack(buf[:], false)
+	idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
+	return idField
 }
 
 func checkFlags(c *cli.Context, str ...string) error {
@@ -225,4 +321,38 @@ func checkFlags(c *cli.Context, str ...string) error {
 		}
 	}
 	return nil
+}
+
+func initializeLoggers(c *cli.Context) {
+	if !c.Bool("log") {
+		logger = log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
+		errLogger = log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
+	} else {
+		l := &lumberjack.Logger{
+			Filename:   "log/normal.log",
+			MaxAge:     3,
+			MaxSize:    150,
+			Compress:   true,
+			MaxBackups: 7,
+		}
+		errL := &lumberjack.Logger{
+			MaxBackups: 20,
+			Filename:   "log/error.log",
+			MaxSize:    150,
+			MaxAge:     30,
+			Compress:   true,
+		}
+		logger = log.NewJSONLogger(log.NewSyncWriter(l))
+		errLogger = log.NewJSONLogger(log.NewSyncWriter(errL))
+	}
+	errLogger = level.NewFilter(errLogger, level.AllowError())
+
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
+	errLogger = log.With(errLogger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
+
+	if c.Bool("debug") {
+		logger = level.NewFilter(logger, level.AllowAll())
+	} else {
+		logger = level.NewFilter(logger, level.AllowInfo())
+	}
 }

@@ -1,19 +1,11 @@
 package util
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 
 	"github.com/reiver/go-porterstemmer"
 )
-
-// Check checks for the existence of an error, and if any, displays the specified message in a standard stream
-func Check(err error, format string) {
-	if err != nil {
-		fmt.Printf(format, err)
-	}
-}
 
 // Abs takes a number x and returns its module
 func Abs(x int) int {
