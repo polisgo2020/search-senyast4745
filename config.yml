@@ -1,0 +1,21 @@
+server:
+  timeout: 0
+  port: 8888
+logger:
+  - name: console-logger
+    output:
+      type: console
+    log-level: info
+    format: logfmt
+
+  - name: debug-file-logger
+    output:
+      type: file
+      rollback:
+        filename: logs/debug.log
+        maxsize: 3
+        maxage: 3
+        maxbackups: 3
+        compress: true
+    log-level: debug
+    format: json
