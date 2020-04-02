@@ -16,8 +16,8 @@ func Abs(x int) int {
 }
 
 // CleanUserInput takes an array of words and formats it, removing the word stop and highlighting tokens
-func CleanUserInput(word string, consumer func(input string)) {
-	word = strings.TrimFunc(word, func(r rune) bool {
+func CleanUserInput(rawWord string, consumer func(input string)) {
+	word := strings.TrimFunc(rawWord, func(r rune) bool {
 		return !unicode.IsLetter(r)
 	})
 	if !EnglishStopWordChecker(word) {

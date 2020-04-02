@@ -8,11 +8,12 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 )
 
 const (
-	json   = "json"
-	logfmt = "logfmt"
+	jsonfmt = "json"
+	logfmt  = "logfmt"
 
 	console = "console"
 	file    = "file"
@@ -49,8 +50,8 @@ func initDefaultLogger() *customLogger {
 	log = level.NewFilter(log, level.AllowInfo())
 
 	logger.consoleLoggers = append(logger.consoleLoggers, &log)
-
-	return instance
+	log = kitlog.With(log, "log-name", "default")
+	return logger
 }
 
 func GetLogger(configs ...Config) *customLogger {
@@ -80,7 +81,7 @@ func GetLogger(configs ...Config) *customLogger {
 			}
 
 			switch conf.Format {
-			case json:
+			case jsonfmt:
 				log = kitlog.NewJSONLogger(kitlog.NewSyncWriter(w))
 			case logfmt:
 				log = kitlog.NewLogfmtLogger(kitlog.NewSyncWriter(w))
@@ -102,7 +103,7 @@ func GetLogger(configs ...Config) *customLogger {
 				fmt.Printf("incorrect log-level %s, using info \n", conf.LogLevel)
 				log = level.NewFilter(log, level.AllowInfo())
 			}
-
+			log = kitlog.With(log, "ts", kitlog.TimestampFormat(time.Now, time.RFC3339), "caller", kitlog.DefaultCaller)
 			log = kitlog.With(log, "log-name", conf.Name)
 
 		}
@@ -131,29 +132,15 @@ func Error(v ...interface{}) {
 }
 
 func (log *customLogger) loggingWithLevel(levelFun logLevel, v interface{}) {
-	readSyn := sync.RWMutex{}
 
 	info := v.([]interface{})
-	wg := sync.WaitGroup{}
 	conLoggers := log.consoleLoggers
-
 	for i := range conLoggers {
-		wg.Add(1)
-		go func(wg *sync.WaitGroup) {
-			defer wg.Done()
-			readSyn.RLock()
-			defer readSyn.RUnlock()
-			levelFun(*conLoggers[i]).Log(info...)
-		}(&wg)
+		levelFun(*conLoggers[i]).Log(info...)
 	}
 
 	loggers := log.loggers
 	for i := range loggers {
-		go func() {
-			readSyn.RLock()
-			defer readSyn.RUnlock()
-			levelFun(*loggers[i]).Log(info...)
-		}()
+		levelFun(*loggers[i]).Log(info...)
 	}
-	wg.Wait()
 }

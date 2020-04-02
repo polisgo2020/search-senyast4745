@@ -1,0 +1,514 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/polisgo2020/search-senyast4745/util/stop_words.go (100.0%)</option>
+				
+				<option value="file1">github.com/polisgo2020/search-senyast4745/util/util.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package util
+
+import "strings"
+
+func EnglishStopWordChecker(s string) bool <span class="cov8" title="1">{
+        return english[strings.ToLower(s)]
+}</span>
+
+var english = map[string]bool{
+        "a":            true,
+        "about":        true,
+        "above":        true,
+        "across":       true,
+        "after":        true,
+        "afterwards":   true,
+        "again":        true,
+        "against":      true,
+        "all":          true,
+        "almost":       true,
+        "alone":        true,
+        "along":        true,
+        "already":      true,
+        "also":         true,
+        "although":     true,
+        "always":       true,
+        "am":           true,
+        "among":        true,
+        "amongst":      true,
+        "amoungst":     true,
+        "amount":       true,
+        "an":           true,
+        "and":          true,
+        "another":      true,
+        "any":          true,
+        "anyhow":       true,
+        "anyone":       true,
+        "anything":     true,
+        "anyway":       true,
+        "anywhere":     true,
+        "are":          true,
+        "around":       true,
+        "as":           true,
+        "at":           true,
+        "back":         true,
+        "be":           true,
+        "became":       true,
+        "because":      true,
+        "become":       true,
+        "becomes":      true,
+        "becoming":     true,
+        "been":         true,
+        "before":       true,
+        "beforehand":   true,
+        "behind":       true,
+        "being":        true,
+        "below":        true,
+        "beside":       true,
+        "besides":      true,
+        "between":      true,
+        "beyond":       true,
+        "bill":         true,
+        "both":         true,
+        "bottom":       true,
+        "but":          true,
+        "by":           true,
+        "call":         true,
+        "can":          true,
+        "cannot":       true,
+        "cant":         true,
+        "co":           true,
+        "con":          true,
+        "could":        true,
+        "couldnt":      true,
+        "cry":          true,
+        "de":           true,
+        "describe":     true,
+        "detail":       true,
+        "do":           true,
+        "done":         true,
+        "down":         true,
+        "due":          true,
+        "during":       true,
+        "each":         true,
+        "eg":           true,
+        "eight":        true,
+        "either":       true,
+        "eleven":       true,
+        "else":         true,
+        "elsewhere":    true,
+        "empty":        true,
+        "enough":       true,
+        "etc":          true,
+        "even":         true,
+        "ever":         true,
+        "every":        true,
+        "everyone":     true,
+        "everything":   true,
+        "everywhere":   true,
+        "except":       true,
+        "few":          true,
+        "fifteen":      true,
+        "fify":         true,
+        "fill":         true,
+        "find":         true,
+        "fire":         true,
+        "first":        true,
+        "five":         true,
+        "for":          true,
+        "former":       true,
+        "formerly":     true,
+        "forty":        true,
+        "found":        true,
+        "four":         true,
+        "from":         true,
+        "front":        true,
+        "full":         true,
+        "further":      true,
+        "get":          true,
+        "give":         true,
+        "go":           true,
+        "had":          true,
+        "has":          true,
+        "hasnt":        true,
+        "have":         true,
+        "he":           true,
+        "hence":        true,
+        "her":          true,
+        "here":         true,
+        "hereafter":    true,
+        "hereby":       true,
+        "herein":       true,
+        "hereupon":     true,
+        "hers":         true,
+        "herself":      true,
+        "him":          true,
+        "himself":      true,
+        "his":          true,
+        "how":          true,
+        "however":      true,
+        "hundred":      true,
+        "ie":           true,
+        "if":           true,
+        "in":           true,
+        "inc":          true,
+        "indeed":       true,
+        "interest":     true,
+        "into":         true,
+        "is":           true,
+        "it":           true,
+        "its":          true,
+        "itself":       true,
+        "keep":         true,
+        "last":         true,
+        "latter":       true,
+        "latterly":     true,
+        "least":        true,
+        "less":         true,
+        "ltd":          true,
+        "made":         true,
+        "many":         true,
+        "may":          true,
+        "me":           true,
+        "meanwhile":    true,
+        "might":        true,
+        "mill":         true,
+        "mine":         true,
+        "more":         true,
+        "moreover":     true,
+        "most":         true,
+        "mostly":       true,
+        "move":         true,
+        "much":         true,
+        "must":         true,
+        "my":           true,
+        "myself":       true,
+        "name":         true,
+        "namely":       true,
+        "neither":      true,
+        "never":        true,
+        "nevertheless": true,
+        "next":         true,
+        "nine":         true,
+        "no":           true,
+        "nobody":       true,
+        "none":         true,
+        "noone":        true,
+        "nor":          true,
+        "not":          true,
+        "nothing":      true,
+        "now":          true,
+        "nowhere":      true,
+        "of":           true,
+        "off":          true,
+        "often":        true,
+        "on":           true,
+        "once":         true,
+        "one":          true,
+        "only":         true,
+        "onto":         true,
+        "or":           true,
+        "other":        true,
+        "others":       true,
+        "otherwise":    true,
+        "our":          true,
+        "ours":         true,
+        "ourselves":    true,
+        "out":          true,
+        "over":         true,
+        "own":          true,
+        "part":         true,
+        "per":          true,
+        "perhaps":      true,
+        "please":       true,
+        "put":          true,
+        "rather":       true,
+        "re":           true,
+        "same":         true,
+        "see":          true,
+        "seem":         true,
+        "seemed":       true,
+        "seeming":      true,
+        "seems":        true,
+        "serious":      true,
+        "several":      true,
+        "she":          true,
+        "should":       true,
+        "show":         true,
+        "side":         true,
+        "since":        true,
+        "sincere":      true,
+        "six":          true,
+        "sixty":        true,
+        "so":           true,
+        "some":         true,
+        "somehow":      true,
+        "someone":      true,
+        "something":    true,
+        "sometime":     true,
+        "sometimes":    true,
+        "somewhere":    true,
+        "still":        true,
+        "such":         true,
+        "system":       true,
+        "take":         true,
+        "ten":          true,
+        "than":         true,
+        "that":         true,
+        "the":          true,
+        "their":        true,
+        "them":         true,
+        "themselves":   true,
+        "then":         true,
+        "thence":       true,
+        "there":        true,
+        "thereafter":   true,
+        "thereby":      true,
+        "therefore":    true,
+        "therein":      true,
+        "thereupon":    true,
+        "these":        true,
+        "they":         true,
+        "thickv":       true,
+        "thin":         true,
+        "third":        true,
+        "this":         true,
+        "those":        true,
+        "though":       true,
+        "three":        true,
+        "through":      true,
+        "throughout":   true,
+        "thru":         true,
+        "thus":         true,
+        "to":           true,
+        "together":     true,
+        "too":          true,
+        "top":          true,
+        "toward":       true,
+        "towards":      true,
+        "twelve":       true,
+        "twenty":       true,
+        "two":          true,
+        "un":           true,
+        "under":        true,
+        "until":        true,
+        "up":           true,
+        "upon":         true,
+        "us":           true,
+        "very":         true,
+        "via":          true,
+        "was":          true,
+        "we":           true,
+        "well":         true,
+        "were":         true,
+        "what":         true,
+        "whatever":     true,
+        "when":         true,
+        "whence":       true,
+        "whenever":     true,
+        "where":        true,
+        "whereafter":   true,
+        "whereas":      true,
+        "whereby":      true,
+        "wherein":      true,
+        "whereupon":    true,
+        "wherever":     true,
+        "whether":      true,
+        "which":        true,
+        "while":        true,
+        "whither":      true,
+        "who":          true,
+        "whoever":      true,
+        "whole":        true,
+        "whom":         true,
+        "whose":        true,
+        "why":          true,
+        "will":         true,
+        "with":         true,
+        "within":       true,
+        "without":      true,
+        "would":        true,
+        "yet":          true,
+        "you":          true,
+        "your":         true,
+        "yours":        true,
+        "yourself":     true,
+        "yourselves":   true,
+        "couldn't":     true,
+        "did":          true,
+        "didnt":        true,
+        "does":         true,
+        "doesn't":      true,
+        "doing":        true,
+        "don't":        true,
+        "hadn't":       true,
+        "hasn't":       true,
+        "haven't":      true,
+        "having":       true,
+        "hed":          true,
+        "hell":         true,
+        "hes":          true,
+        "hows":         true,
+        "i":            true,
+        "i'd":          true,
+        "i'll":         true,
+        "i'm":          true,
+        "i've":         true,
+        "isn't":        true,
+        "it's":         true,
+        "lets":         true,
+        "mustn't":      true,
+        "ought":        true,
+        "shan't":       true,
+        "she'd":        true,
+        "shell":        true,
+        "she's":        true,
+        "shouldn't":    true,
+        "that's":       true,
+        "theirs":       true,
+        "there's":      true,
+        "they'd":       true,
+        "they'll":      true,
+        "they're":      true,
+        "they've":      true,
+        "wasn't":       true,
+        "we'd":         true,
+        "we'll":        true,
+        "we've":        true,
+        "weren't":      true,
+        "what's":       true,
+        "when's":       true,
+        "where's":      true,
+        "who's":        true,
+        "why's":        true,
+        "won't":        true,
+        "wouldn't":     true,
+        "you'd":        true,
+        "you'll":       true,
+        "you're":       true,
+        "you've":       true}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package util
+
+import (
+        "strings"
+        "unicode"
+
+        "github.com/reiver/go-porterstemmer"
+)
+
+// Abs takes a number x and returns its module
+func Abs(x int) int <span class="cov8" title="1">{
+        if x &lt; 0 </span><span class="cov8" title="1">{
+                return -x
+        }</span>
+        <span class="cov8" title="1">return x</span>
+}
+
+// CleanUserInput takes an array of words and formats it, removing the word stop and highlighting tokens
+func CleanUserInput(rawWord string, consumer func(input string)) <span class="cov8" title="1">{
+        word := strings.TrimFunc(rawWord, func(r rune) bool </span><span class="cov8" title="1">{
+                return !unicode.IsLetter(r)
+        }</span>)
+        <span class="cov8" title="1">if !EnglishStopWordChecker(word) </span><span class="cov8" title="1">{
+                word = porterstemmer.StemString(word)
+                if len(word) &gt; 0 </span><span class="cov8" title="1">{
+                        consumer(word)
+                }</span>
+        }
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

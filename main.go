@@ -5,13 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"gopkg.in/yaml.v2"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/polisgo2020/search-senyast4745/index"
 	"github.com/polisgo2020/search-senyast4745/log"
@@ -19,14 +24,14 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var wapp *util.App
+var wapp *App
 
 func main() {
 
 	//os.Mkdir("logs")
 
 	var err error
-	wapp, err = util.NewApp()
+	wapp, err = NewApp()
 
 	if err != nil {
 		fmt.Printf("Error %e while starting application", err)
@@ -187,10 +192,21 @@ func collectAndWriteMap(ind *index.Index, indexFile string) error {
 	return nil
 }
 
+type FileResponse struct {
+	Filename string
+	Count    int
+	Spacing  int
+}
+
 func search(c *cli.Context) error {
 
 	log.Debug("msg", "search run", "index file", c.String("index"),
 		"search words", c.String("search-word"), "server port", wapp.Port)
+	if err := checkFlags(c, "index"); err != nil {
+		log.Error("error", err, "context flags", c.FlagNames(),
+			"msg", "error while checking context")
+		return nil
+	}
 
 	data, err := readCSVFile(c.String("index"))
 	if err != nil {
@@ -202,35 +218,43 @@ func search(c *cli.Context) error {
 	r := wapp.Mux
 
 	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+		searchWords := r.FormValue("search")
+		log.Info("msg", searchWords)
+		inputWords := make([]string, 0)
+		for _, word := range strings.Split(searchWords, ",") {
+			util.CleanUserInput(word, func(input string) {
+				inputWords = append(inputWords, input)
+			})
+		}
+		log.Info("msg", inputWords)
+		if len(inputWords) == 0 {
+			log.Error("error", nil,
+				"msg", "Incorrect search words", "input", c.String("search-words"))
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
 
+		var resp []FileResponse
+		for k, v := range getCorrectFiles(data, inputWords) {
+			resp = append(resp, FileResponse{
+				Filename: k,
+				Count:    v.Path,
+				Spacing:  v.Weight,
+			})
+		}
+		log.Info("msg", fmt.Sprintf("resp %+v", resp))
+
+		rawData, err := json.Marshal(resp)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+		if _, err = fmt.Fprint(w, string(rawData)); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
 	})
 
 	if err := http.ListenAndServe(":"+wapp.Port, r); err != nil {
 		log.Error("error", err)
-	}
-
-	if err := checkFlags(c, "index"); err != nil {
-		log.Error("error", err, "context flags", c.FlagNames(),
-			"msg", "error while checking context")
-		return nil
-	}
-
-	inputWords := make([]string, 0)
-	for _, word := range strings.Split(c.String("search-word"), ",") {
-		util.CleanUserInput(word, func(input string) {
-			inputWords = append(inputWords, input)
-		})
-	}
-
-	if len(inputWords) == 0 {
-		log.Error("error", nil,
-			"msg", "Incorrect search words", "input", c.String("search-words"))
-		return nil
-	}
-
-	for k, v := range getCorrectFiles(data, inputWords) {
-		log.Info(
-			"filename", k, "count", v.Path, "spacing", v.Weight, "msg", "result")
 	}
 
 	return nil
@@ -331,4 +355,66 @@ func checkFlags(c *cli.Context, str ...string) error {
 		}
 	}
 	return nil
+}
+
+type appYamlConfig struct {
+	Logger []log.Config `yaml:"logger"`
+	Server struct {
+		Port    string `yaml:"port"`
+		Timeout int    `yaml:"timeout"`
+	}
+}
+
+type App struct {
+	Mux  *chi.Mux
+	Port string
+}
+
+func NewAppFromConfig(conf *appYamlConfig) (*App, error) {
+
+	r := chi.NewRouter()
+	r.Use(func(handler http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			t1 := time.Now()
+
+			defer func() {
+				log.Debug("msg", "response", "status", ww.Status(), "written", ww.BytesWritten(), "time", time.Since(t1))
+			}()
+
+			handler.ServeHTTP(ww, r)
+		}
+		return http.HandlerFunc(fn)
+	})
+	r.Use(middleware.Timeout(time.Duration(conf.Server.Timeout) * time.Millisecond))
+
+	log.GetLogger(conf.Logger...)
+	return &App{Mux: r, Port: conf.Server.Port}, nil
+}
+
+func NewDefaultApp() (*App, error) {
+	r := chi.NewMux()
+	log.GetLogger()
+	return &App{Mux: r, Port: "8080"}, nil
+}
+
+func NewAppFromConfigFile(configFile string) (*App, error) {
+	if _, err := os.Stat(configFile); err == nil {
+		dat, err := ioutil.ReadFile(configFile)
+		if err != nil {
+			return nil, err
+		}
+		conf := appYamlConfig{}
+		if err = yaml.Unmarshal(dat, &conf); err != nil {
+			return nil, err
+		}
+
+		return NewAppFromConfig(&conf)
+	} else {
+		return NewDefaultApp()
+	}
+}
+
+func NewApp() (*App, error) {
+	return NewAppFromConfigFile("config.yml")
 }

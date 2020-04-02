@@ -1,5 +1,5 @@
 server:
-  timeout: 0
+  timeout: 10
   port: 8888
 logger:
   - name: console-logger

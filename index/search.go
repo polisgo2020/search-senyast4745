@@ -1,82 +1,91 @@
 package index
 
 import (
-	"math"
-	"sync"
-
 	"github.com/polisgo2020/search-senyast4745/util"
+	"math"
+	"sort"
 )
 
 type Data struct {
-	file   string
 	Weight int
 	Path   int
 }
 
-type FileStruct struct {
-	File     string `json:"file"`
-	Position []int  `json:"position"`
+type dynamicData struct {
+	Path  int
+	DPVar []*dynamicVar
 }
 
-type Index struct {
-	Data        map[string][]*FileStruct
-	dataChannel chan FileWordMap
+type dynamicVar struct {
+	Position int
+	Weight   int
 }
 
-func NewIndex() *Index {
-	return &Index{Data: make(map[string][]*FileStruct)}
-}
-
-func (ind *Index) OpenApplyAndListenChannel(consumer func(wg *sync.WaitGroup)) {
-	ind.dataChannel = make(chan FileWordMap, 1000)
-	var wg sync.WaitGroup
-	consumer(&wg)
-
-	go func(wg *sync.WaitGroup, readChan chan FileWordMap) {
-		wg.Wait()
-		close(readChan)
-	}(&wg, ind.dataChannel)
-
-	for data := range ind.dataChannel {
-		for j := range data {
-			if ind.Data[j] == nil {
-				ind.Data[j] = []*FileStruct{data[j]}
-			} else {
-				ind.Data[j] = append(ind.Data[j], data[j])
-			}
-		}
+func makeDynamicVar(pos []int) []*dynamicVar {
+	var t []*dynamicVar
+	for i := range pos {
+		t = append(t, &dynamicVar{Position: pos[i]})
 	}
+	return t
 }
 
 // Search sorting Index data by number of occurrences of words and distance between words in the source file
+// use dynamic programming as search algorithm
 func (ind *Index) Search(searchWords []string) map[string]*Data {
-	dataFirst := make(map[int]map[string]*Data)
-	dataSecond := dataFirst
-	for i := range searchWords {
-		for j := range ind.Data[searchWords[i]] {
-			for k := range ind.Data[searchWords[i]][j].Position {
-				minW := math.MaxInt64
-				if dataSecond[k] == nil {
-					dataSecond[k] = make(map[string]*Data)
-				}
-				if _, ok := dataSecond[k][ind.Data[searchWords[i]][j].File]; !ok {
-					dataSecond[k][ind.Data[searchWords[i]][j].File] = &Data{file: ind.Data[searchWords[i]][j].File}
-				}
-				for t := range dataFirst {
-					if dataFirst[t][ind.Data[searchWords[i]][j].File].Weight+util.Abs(t-ind.Data[searchWords[i]][j].Position[k]) < minW {
-						minW = dataFirst[t][ind.Data[searchWords[i]][j].File].Weight + util.Abs(t-ind.Data[searchWords[i]][j].Position[k])
-						dataSecond[t][ind.Data[searchWords[i]][j].File] = &Data{file: ind.Data[searchWords[i]][j].File, Weight: minW,
-							Path: dataFirst[t][ind.Data[searchWords[i]][j].File].Path + 1}
-					}
-				}
+	data := make(map[string]*dynamicData)
+	for _, word := range searchWords {
+		for _, fileStr := range ind.Data[word] {
+			if data[fileStr.File] == nil {
+				data[fileStr.File] = &dynamicData{DPVar: makeDynamicVar(fileStr.Position)}
+			} else {
+				data[fileStr.File].DPVar = dynamicMinPosition(data[fileStr.File].DPVar, fileStr.Position)
+			}
+			data[fileStr.File].Path++
+		}
+	}
+	res := make(map[string]*Data)
+	for s := range data {
+		res[s] = transform(data[s])
+	}
+	return res
+}
+
+func dynamicMinPosition(dp []*dynamicVar, pos []int) []*dynamicVar {
+	for v := range dp {
+		dp[v].Weight += findMinDiffPos(pos, dp[v].Position)
+	}
+	return dp
+}
+
+func findMinDiffPos(pos []int, key int) int {
+	i := sort.SearchInts(pos, key)
+	var diff int
+	if i == 0 {
+		diff = util.Abs(key - pos[i])
+	} else {
+		if i == len(pos) {
+			diff = util.Abs(key - pos[i-1])
+		} else {
+			t := util.Abs(key - pos[i])
+			k := util.Abs(key - pos[i-1])
+			if t < k {
+				diff = t
+			} else {
+				diff = k
 			}
 		}
 	}
-	ans := make(map[string]*Data)
-	for _, v := range dataFirst {
-		for k := range v {
-			ans[k] = v[k]
+	return diff
+}
+
+func transform(dd *dynamicData) *Data {
+	data := &Data{Path: dd.Path}
+	min := math.MaxInt32
+	for i := range dd.DPVar {
+		if dd.DPVar[i].Weight < min {
+			min = dd.DPVar[i].Weight
 		}
 	}
-	return ans
+	data.Weight = min
+	return data
 }
