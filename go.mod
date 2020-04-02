@@ -4,7 +4,6 @@ go 1.13
 
 require (
 	github.com/go-chi/chi v4.0.4+incompatible
-	github.com/go-chi/docgen v1.0.5
 	github.com/go-kit/kit v0.10.0
 	github.com/reiver/go-porterstemmer v1.0.1
 	github.com/stretchr/testify v1.4.0
