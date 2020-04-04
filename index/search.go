@@ -1,9 +1,10 @@
 package index
 
 import (
-	"github.com/polisgo2020/search-senyast4745/util"
 	"math"
 	"sort"
+
+	"github.com/polisgo2020/search-senyast4745/util"
 )
 
 type Data struct {

@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
 	"log"
 	"net/http"
 	"os"
@@ -15,9 +13,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/urfave/cli/v2"
+
 	"github.com/polisgo2020/search-senyast4745/index"
 	"github.com/polisgo2020/search-senyast4745/util"
-	"github.com/urfave/cli/v2"
 )
 
 func main() {
@@ -134,7 +135,6 @@ func collectWordData(fileNames []string) *index.Index {
 	m := index.NewIndex()
 
 	m.OpenApplyAndListenChannel(func(wg *sync.WaitGroup) {
-
 		for i := range fileNames {
 			wg.Add(1)
 			go readFileByWords(wg, m, fileNames[i])

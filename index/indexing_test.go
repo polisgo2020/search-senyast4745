@@ -2,10 +2,11 @@ package index
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
 func TestNewIndex(t *testing.T) {
@@ -20,14 +21,14 @@ type indexTestSuite struct {
 	suite.Suite
 	called        bool
 	index         *Index
-	fileWorldMaps []FileWordMap
+	fileWorldMaps []fileWordMap
 	fileNames     []string
 	input         string
 }
 
 func (i *indexTestSuite) SetupTest() {
 	i.index = NewIndex()
-	i.index.dataChannel = make(chan FileWordMap, 10)
+	i.index.dataChannel = make(chan fileWordMap, 10)
 
 	i.fileNames = []string{"file1", "file2"}
 
@@ -41,9 +42,9 @@ func (i *indexTestSuite) SetupTest() {
 
 }
 
-func setupDataToFileMap(filename string) FileWordMap {
+func setupDataToFileMap(filename string) fileWordMap {
 
-	fileWordMap := make(FileWordMap)
+	fileWordMap := make(fileWordMap)
 	fileWordMap["hello"] = &FileStruct{
 		File: filename, Position: []int{0, 2},
 	}
@@ -57,7 +58,7 @@ func setupDataToFileMap(filename string) FileWordMap {
 }
 
 func (i *indexTestSuite) TearDownTest() {
-	i.fileWorldMaps = make([]FileWordMap, 0, 3)
+	i.fileWorldMaps = make([]fileWordMap, 0, 3)
 	i.fileNames = make([]string, 0, 3)
 	if !isClosed(i.index.dataChannel) {
 		close(i.index.dataChannel)
@@ -134,7 +135,7 @@ func (i *indexTestSuite) TestIndex_OpenApplyAndListenChannel2() {
 	require.Equal(i.T(), 2, len(i.index.Data["hello"]))
 }
 
-func isClosed(ch <-chan FileWordMap) bool {
+func isClosed(ch <-chan fileWordMap) bool {
 	if ch == nil {
 		return true
 	}

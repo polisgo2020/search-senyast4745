@@ -8,16 +8,18 @@ import (
 	"github.com/polisgo2020/search-senyast4745/util"
 )
 
+// FileStruct describes the frequency structure of the token in the file
 type FileStruct struct {
 	File     string `json:"file"`
 	Position []int  `json:"position"`
 }
 
-type FileWordMap map[string]*FileStruct
+type fileWordMap map[string]*FileStruct
 
+// Index describes search inverted index
 type Index struct {
 	Data        map[string][]*FileStruct
-	dataChannel chan FileWordMap
+	dataChannel chan fileWordMap
 }
 
 func NewIndex() *Index {
@@ -29,11 +31,11 @@ func (ind *Index) add(word string, data []*FileStruct) {
 }
 
 func (ind *Index) OpenApplyAndListenChannel(consumer func(wg *sync.WaitGroup)) {
-	ind.dataChannel = make(chan FileWordMap, 1000)
+	ind.dataChannel = make(chan fileWordMap, 1000)
 	var wg sync.WaitGroup
 	consumer(&wg)
 
-	go func(wg *sync.WaitGroup, readChan chan FileWordMap) {
+	go func(wg *sync.WaitGroup, readChan chan fileWordMap) {
 		wg.Wait()
 		close(readChan)
 	}(&wg, ind.dataChannel)
@@ -55,7 +57,7 @@ func (ind *Index) MapAndCleanWords(reader io.Reader, fn string) {
 	sc.Split(bufio.ScanWords)
 
 	var position int
-	data := make(FileWordMap)
+	data := make(fileWordMap)
 	for sc.Scan() {
 		util.CleanUserInput(sc.Text(), func(input string) {
 			if data[input] == nil {

@@ -3,8 +3,9 @@ package index
 import (
 	"github.com/stretchr/testify/require"
 	//"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
 type searchTestSuite struct {
