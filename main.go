@@ -189,7 +189,7 @@ func search(c *cli.Context) error {
 		searchWords := req.FormValue("search")
 		log.Println("msg", searchWords)
 		var inputWords []string
-		for _, word := range strings.Split(searchWords, ",") {
+		for _, word := range strings.Split(searchWords, " ") {
 			util.CleanUserInput(word, func(input string) {
 				inputWords = append(inputWords, input)
 			})
@@ -257,7 +257,6 @@ func filePathWalkDir(root string) ([]string, error) {
 
 func readFileByWords(wg *sync.WaitGroup, ind *index.Index, fn string) {
 	defer wg.Done()
-	log.Println("msg", "goroutine start", "filename", fn, "goroutine id", goid())
 	file, err := os.Open(fn)
 	if err != nil {
 		log.Println("error", err,
@@ -268,15 +267,7 @@ func readFileByWords(wg *sync.WaitGroup, ind *index.Index, fn string) {
 	defer file.Close()
 
 	ind.MapAndCleanWords(file, fn)
-	log.Println("msg", "goroutine normal end", "goroutine id", goid())
 	return
-}
-
-func goid() string {
-	var buf [64]byte
-	n := runtime.Stack(buf[:], false)
-	idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
-	return idField
 }
 
 func checkFlags(c *cli.Context, str ...string) error {
