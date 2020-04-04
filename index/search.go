@@ -32,6 +32,7 @@ func makeDynamicVar(pos []int) []*dynamicVar {
 // Search sorting Index data by number of occurrences of words and distance between words in the source file
 // use dynamic programming as search algorithm
 func (ind *Index) Search(searchWords []string) map[string]*Data {
+
 	data := make(map[string]*dynamicData)
 	for _, word := range searchWords {
 		for _, fileStr := range ind.Data[word] {

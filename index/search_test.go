@@ -14,14 +14,18 @@ type searchTestSuite struct {
 
 func (i *searchTestSuite) SetupTest() {
 	i.index = NewIndex()
-	i.index.Data["hello"] = []*FileStruct{{
+	FillDefaultIndex(i.index)
+}
+
+func FillDefaultIndex(i *Index) {
+	i.Data["hello"] = []*FileStruct{{
 		File:     "file1",
 		Position: []int{0, 5},
 	}, {
 		File:     "file2",
 		Position: []int{6},
 	}}
-	i.index.Data["world"] = []*FileStruct{{
+	i.Data["world"] = []*FileStruct{{
 		File:     "file1",
 		Position: []int{3},
 	}, {
@@ -32,7 +36,7 @@ func (i *searchTestSuite) SetupTest() {
 		Position: []int{3},
 	},
 	}
-	i.index.Data["golang"] = []*FileStruct{{
+	i.Data["golang"] = []*FileStruct{{
 		File:     "file2",
 		Position: []int{4, 11},
 	}, {

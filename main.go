@@ -1,13 +1,11 @@
 package main
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -18,7 +16,6 @@ import (
 	"time"
 
 	"github.com/polisgo2020/search-senyast4745/index"
-	//"github.com/polisgo2020/search-senyast4745/log"
 	"github.com/polisgo2020/search-senyast4745/util"
 	"github.com/urfave/cli/v2"
 )
@@ -60,10 +57,10 @@ func main() {
 	}
 
 	searchFlag := &cli.StringFlag{
-		Aliases:  []string{"sw"},
-		Name:     "search-word, sw",
-		Usage:    "Search words separated by comma",
-		Required: true,
+		Aliases:     []string{"p"},
+		Name:        "port",
+		Usage:       "Network interface",
+		DefaultText: "8888",
 	}
 
 	logFolderFlag := &cli.BoolFlag{
@@ -162,28 +159,7 @@ func collectAndWriteMap(ind *index.Index, indexFile string) error {
 	log.Println("msg", "writing index to file in csv format", "file", indexFile, "index", ind,
 		"index length", len(ind.Data))
 	recordFile, _ := os.Create(indexFile)
-	w := csv.NewWriter(recordFile)
-	var count int
-	for k, v := range ind.Data {
-		t, err := json.Marshal(v)
-		if err != nil {
-			log.Println("error", err,
-				"msg", fmt.Sprintf("can not create json from obj %+v \n", &v), "obj", &v)
-		}
-		err = w.Write([]string{k, string(t)})
-		if err != nil {
-			log.Println("error", err,
-				"msg", fmt.Sprintf("can not save record %s,%s \n", k, t), "file", indexFile, "word", k,
-				"filestr", string(t))
-		}
-		count++
-		if count > 10 {
-			w.Flush()
-			log.Println("msg", "flush writer", "writer", w)
-			count = 0
-		}
-	}
-	return nil
+	return ind.ToFile(index.NewCsvEncoder(recordFile))
 }
 
 type FileResponse struct {
@@ -193,18 +169,20 @@ type FileResponse struct {
 }
 
 func search(c *cli.Context) error {
-	wapp, err := NewApp()
-
-	if err != nil {
-		log.Println("error", err, "msg", "can not create new application")
-		return nil
-	}
 
 	log.Println("msg", "search run", "index file", c.String("index"),
-		"search words", c.String("search-word"), "server port", wapp.Port)
+		"server port", c.String("port"))
+
 	if err := checkFlags(c, "index"); err != nil {
 		log.Println("error", err, "context flags", c.FlagNames(),
 			"msg", "error while checking context")
+		return nil
+	}
+
+	wapp, err := NewApp(c.String("port"))
+
+	if err != nil {
+		log.Println("error", err, "msg", "error while creating web application")
 		return nil
 	}
 
@@ -217,10 +195,10 @@ func search(c *cli.Context) error {
 
 	r := wapp.Mux
 
-	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-		searchWords := r.FormValue("search")
+	r.Post("/", func(w http.ResponseWriter, req *http.Request) {
+		searchWords := req.FormValue("search")
 		log.Println("msg", searchWords)
-		inputWords := make([]string, 0)
+		var inputWords []string
 		for _, word := range strings.Split(searchWords, ",") {
 			util.CleanUserInput(word, func(input string) {
 				inputWords = append(inputWords, input)
@@ -235,7 +213,7 @@ func search(c *cli.Context) error {
 		}
 
 		var resp []FileResponse
-		for k, v := range getCorrectFiles(data, inputWords) {
+		for k, v := range data.Search(inputWords) {
 			resp = append(resp, FileResponse{
 				Filename: k,
 				Count:    v.Path,
@@ -260,50 +238,15 @@ func search(c *cli.Context) error {
 	return nil
 }
 
-func getCorrectFiles(m *index.Index, searchWords []string) map[string]*index.Data {
-	data := index.NewIndex()
-	for i := range searchWords {
-		tmp := m.Data[searchWords[i]]
-		if len(tmp) != 0 {
-			data.Data[searchWords[i]] = tmp
-		}
-	}
-	log.Println("msg", "start search in index")
-	return data.Search(searchWords)
-}
-
 func readCSVFile(filePath string) (*index.Index, error) {
 	csvFile, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
-	r := csv.NewReader(csvFile)
 	data := index.NewIndex()
-	var errCount int
-	for {
-		record, err := r.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Println("error", err,
-				"msg", "can not read csv line")
-			errCount++
-			if errCount > 100 {
-				return nil, err
-			}
-			continue
-		}
-		log.Println("msg", "reading data from csv", "data", record)
-		var tmp []*index.FileStruct
-		if json.Unmarshal([]byte(record[1]), &tmp) != nil {
-			log.Println("error", err,
-				"msg", fmt.Sprintf("can not parse json data %s \n", record[1]), "data", record[1])
-			continue
-		}
-		data.Data[record[0]] = tmp
-	}
-	return data, nil
+	decoder := index.NewCsvDecoder(csvFile)
+	err = data.FromFile(decoder)
+	return data, err
 }
 
 // FilePathWalkDir bypasses the given director and returns a list of all files in this folder
@@ -362,22 +305,9 @@ type App struct {
 	Port string
 }
 
-func NewApp() (*App, error) {
-	r := chi.NewRouter()
-	r.Use(func(handler http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
-			t1 := time.Now()
-
-			defer func() {
-				log.Println("msg", "response", "status", ww.Status(), "written", ww.BytesWritten(), "time", time.Since(t1))
-			}()
-
-			handler.ServeHTTP(ww, r)
-		}
-		return http.HandlerFunc(fn)
-	})
-	r.Use(middleware.Timeout(10 * time.Millisecond))
-
-	return &App{Mux: r, Port: "8888"}, nil
+func NewApp(port string) (*App, error) {
+	r := chi.NewMux()
+	r.Use(middleware.DefaultLogger)
+	r.Use(middleware.Timeout(100 * time.Millisecond))
+	return &App{Mux: r, Port: port}, nil
 }

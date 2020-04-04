@@ -54,9 +54,11 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/polisgo2020/search-senyast4745/index/indexing.go (100.0%)</option>
+				<option value="file0">github.com/polisgo2020/search-senyast4745/index/file.go (64.4%)</option>
 				
-				<option value="file1">github.com/polisgo2020/search-senyast4745/index/search.go (86.5%)</option>
+				<option value="file1">github.com/polisgo2020/search-senyast4745/index/indexing.go (100.0%)</option>
+				
+				<option value="file2">github.com/polisgo2020/search-senyast4745/index/search.go (86.5%)</option>
 				
 				</select>
 			</div>
@@ -71,6 +73,115 @@
 		<div id="content">
 		
 		<pre class="file" id="file0" style="display: none">package index
+
+import (
+        "encoding/csv"
+        "encoding/json"
+        "fmt"
+        "io"
+        "log"
+        "sync"
+)
+
+func (ind *Index) FromFile(decoder JsonDecoder) error <span class="cov8" title="1">{
+        return decoder.DecodeJson(ind)
+}</span>
+
+func (ind *Index) ToFile(encoder JsonEncoder) error <span class="cov8" title="1">{
+        return encoder.EncodeJson(ind)
+}</span>
+
+type CsvDecoder struct {
+        m      *sync.RWMutex
+        reader io.Reader
+}
+
+type CsvEncoder struct {
+        m      *sync.RWMutex
+        writer io.Writer
+}
+
+func (c *CsvEncoder) EncodeJson(ind *Index) error <span class="cov8" title="1">{
+
+        w := csv.NewWriter(c.writer)
+        var count int
+        for k, v := range ind.Data </span><span class="cov8" title="1">{
+                t, err := json.Marshal(v)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("can not create json from obj %+v \n", &amp;v)
+                        return err
+                }</span>
+                <span class="cov8" title="1">err = w.Write([]string{k, string(t)})
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("can not save record %s,%s \n", k, t)
+                        return err
+                }</span>
+                <span class="cov8" title="1">count++
+                if count &gt; 10 </span><span class="cov0" title="0">{
+                        c.m.Lock()
+                        w.Flush()
+                        c.m.Unlock()
+
+                        log.Println("msg", "flush writer", "writer", w)
+                        count = 0
+                }</span>
+        }
+        <span class="cov8" title="1">w.Flush()
+
+        return nil</span>
+}
+
+func (c *CsvDecoder) DecodeJson(data *Index) error <span class="cov8" title="1">{
+        r := csv.NewReader(c.reader)
+        var errCount int
+
+        for </span><span class="cov8" title="1">{
+                c.m.RLock()
+                record, err := r.Read()
+                c.m.RUnlock()
+
+                if err == io.EOF </span><span class="cov8" title="1">{
+                        break</span>
+                }
+                <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                        log.Println("error", err,
+                                "msg", "can not read csv line")
+                        errCount++
+                        if errCount &gt; 100 </span><span class="cov0" title="0">{
+                                return err
+                        }</span>
+                        <span class="cov0" title="0">continue</span>
+                }
+                <span class="cov8" title="1">log.Println("msg", "reading data from csv", "data", record)
+                var tmp []*FileStruct
+                if json.Unmarshal([]byte(record[1]), &amp;tmp) != nil </span><span class="cov0" title="0">{
+                        log.Println("error", err,
+                                "msg", fmt.Sprintf("can not parse json data %s \n", record[1]), "data", record[1])
+                        continue</span>
+                }
+                <span class="cov8" title="1">data.add(record[0], tmp)</span>
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+
+func NewCsvDecoder(reader io.Reader) *CsvDecoder <span class="cov8" title="1">{
+        return &amp;CsvDecoder{m: &amp;sync.RWMutex{}, reader: reader}
+}</span>
+
+func NewCsvEncoder(writer io.Writer) *CsvEncoder <span class="cov8" title="1">{
+        return &amp;CsvEncoder{m: &amp;sync.RWMutex{}, writer: writer}
+}</span>
+
+type JsonDecoder interface {
+        DecodeJson(i *Index) error
+}
+
+type JsonEncoder interface {
+        EncodeJson(i *Index) error
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package index
 
 import (
         "bufio"
@@ -94,6 +205,10 @@ type Index struct {
 
 func NewIndex() *Index <span class="cov8" title="1">{
         return &amp;Index{Data: make(map[string][]*FileStruct)}
+}</span>
+
+func (ind *Index) add(word string, data []*FileStruct )  <span class="cov8" title="1">{
+        ind.Data[word] = data
 }</span>
 
 func (ind *Index) OpenApplyAndListenChannel(consumer func(wg *sync.WaitGroup)) <span class="cov8" title="1">{
@@ -138,7 +253,7 @@ func (ind *Index) MapAndCleanWords(reader io.Reader, fn string) <span class="cov
 }
 </pre>
 		
-		<pre class="file" id="file1" style="display: none">package index
+		<pre class="file" id="file2" style="display: none">package index
 
 import (
         "github.com/polisgo2020/search-senyast4745/util"
@@ -172,6 +287,7 @@ func makeDynamicVar(pos []int) []*dynamicVar <span class="cov8" title="1">{
 // Search sorting Index data by number of occurrences of words and distance between words in the source file
 // use dynamic programming as search algorithm
 func (ind *Index) Search(searchWords []string) map[string]*Data <span class="cov8" title="1">{
+
         data := make(map[string]*dynamicData)
         for _, word := range searchWords </span><span class="cov8" title="1">{
                 for _, fileStr := range ind.Data[word] </span><span class="cov8" title="1">{
