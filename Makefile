@@ -11,10 +11,14 @@ all: build test run_default
 build:
 	$(GOBUILD) -o $(BINARY_NAME) main.go
 
-run_default:
+run_default: run_build_file run_search
+
+run_build_file:
 	mkdir -p $(OUTPUT_FOLDER)
 	$(BINARY_NAME) build --sources $(DATA_FOLDER) $(INDEX_FLAG)
-	$(BINARY_NAME) search $(INDEX_FLAG) --port 8888
+
+run_search:
+		$(BINARY_NAME) search $(INDEX_FLAG) --port 8888
 
 test:
 	go test -v ./index ./util

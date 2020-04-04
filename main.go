@@ -22,16 +22,14 @@ import (
 
 func main() {
 
-	//os.Mkdir("logs")
-
 	var err error
 
-	fmt.Println(`
-		 ___ _   ___     ______  _____    _    ____   ____ _   _ 
-		|_ _| \ | \ \   / / ___|| ____|  / \  |  _ \ / ___| | | |
-		 | ||  \| |\ \ / /\___ \|  _|   / _ \ | |_) | |   | |_| |
-		 | || |\  | \ V /  ___) | |___ / ___ \|  _ <| |___|  _  |
-		|___|_| \_|  \_/  |____/|_____/_/   \_\_| \_\\____|_| |_|
+	log.Println(`
+	 ___ _   ___     ______  _____    _    ____   ____ _   _ 
+	|_ _| \ | \ \   / / ___|| ____|  / \  |  _ \ / ___| | | |
+	 | ||  \| |\ \ / /\___ \|  _|   / _ \ | |_) | |   | |_| |
+	 | || |\  | \ V /  ___) | |___ / ___ \|  _ <| |___|  _  |
+	|___|_| \_|  \_/  |____/|_____/_/   \_\_| \_\\____|_| |_|
 
 	`)
 
@@ -55,17 +53,11 @@ func main() {
 		Usage:    "Files to index",
 		Required: true,
 	}
-
-	searchFlag := &cli.StringFlag{
+	portFlag := &cli.StringFlag{
 		Aliases:     []string{"p"},
 		Name:        "port",
 		Usage:       "Network interface",
 		DefaultText: "8888",
-	}
-
-	logFolderFlag := &cli.BoolFlag{
-		Name:  "log",
-		Usage: "Turn on logging to files",
 	}
 
 	debugFlag := &cli.BoolFlag{
@@ -83,7 +75,6 @@ func main() {
 				indexFileFlag,
 				sourcesFlag,
 				debugFlag,
-				logFolderFlag,
 			},
 			Action: build,
 		},
@@ -93,9 +84,8 @@ func main() {
 			Usage:   "Search over the index",
 			Flags: []cli.Flag{
 				indexFileFlag,
-				searchFlag,
+				portFlag,
 				debugFlag,
-				logFolderFlag,
 			},
 			Action: search,
 		},
@@ -103,7 +93,7 @@ func main() {
 
 	err = app.Run(os.Args)
 	if err != nil {
-		log.Printf("Fatal with %e error while starting command line app", err)
+		log.Printf("Fatal with %q error while starting command line app", err)
 	}
 }
 
@@ -224,9 +214,11 @@ func search(c *cli.Context) error {
 
 		rawData, err := json.Marshal(resp)
 		if err != nil {
+			log.Printf("error %s while marshalling data %+v to json\n", err, resp)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 		if _, err = fmt.Fprint(w, string(rawData)); err != nil {
+			log.Printf("error %s while writing data %s do json\n", err, string(rawData))
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	})
