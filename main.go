@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/polisgo2020/search-senyast4745/config"
-	"github.com/polisgo2020/search-senyast4745/web"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,10 +11,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/polisgo2020/search-senyast4745/config"
+	"github.com/polisgo2020/search-senyast4745/web"
+	"github.com/urfave/cli/v2"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-
-	"github.com/urfave/cli/v2"
 
 	"github.com/polisgo2020/search-senyast4745/index"
 	"github.com/polisgo2020/search-senyast4745/util"

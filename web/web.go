@@ -1,14 +1,15 @@
 package web
 
 import (
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
 	"github.com/polisgo2020/search-senyast4745/config"
 	"github.com/rs/zerolog/log"
-	"net/http"
-	"strings"
-	"time"
 )
 
 type App struct {
