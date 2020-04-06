@@ -1,3 +1,7 @@
 !*.go
 data
 .idea/
+bin
+logs
+output
+*/c.out

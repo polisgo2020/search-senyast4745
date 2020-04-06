@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <style>
+        body {
+            background: black;
+            color: rgb(80, 80, 80);
+        }
+
+        body, pre, #legend span {
+            font-family: Menlo, monospace;
+            font-weight: bold;
+        }
+
+        #topbar {
+            background: black;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 42px;
+            border-bottom: 1px solid rgb(80, 80, 80);
+        }
+
+        #content {
+            margin-top: 50px;
+        }
+
+        #nav, #legend {
+            float: left;
+            margin-left: 10px;
+        }
+
+        #legend {
+            margin-top: 12px;
+        }
+
+        #nav {
+            margin-top: 10px;
+        }
+
+        #legend span {
+            margin: 0 5px;
+        }
+
+        .cov0 {
+            color: rgb(192, 0, 0)
+        }
+
+        .cov1 {
+            color: rgb(128, 128, 128)
+        }
+
+        .cov2 {
+            color: rgb(116, 140, 131)
+        }
+
+        .cov3 {
+            color: rgb(104, 152, 134)
+        }
+
+        .cov4 {
+            color: rgb(92, 164, 137)
+        }
+
+        .cov5 {
+            color: rgb(80, 176, 140)
+        }
+
+        .cov6 {
+            color: rgb(68, 188, 143)
+        }
+
+        .cov7 {
+            color: rgb(56, 200, 146)
+        }
+
+        .cov8 {
+            color: rgb(44, 212, 149)
+        }
+
+        .cov9 {
+            color: rgb(32, 224, 152)
+        }
+
+        .cov10 {
+            color: rgb(20, 236, 155)
+        }
+
+    </style>
+</head>
+<body>
+<div id="topbar">
+    <div id="nav">
+        <select id="files">
+
+            <option value="file0">github.com/polisgo2020/search-senyast4745/index/file.go (84.3%)</option>
+
+            <option value="file1">github.com/polisgo2020/search-senyast4745/index/indexing.go (100.0%)</option>
+
+            <option value="file2">github.com/polisgo2020/search-senyast4745/index/search.go (86.5%)</option>
+
+        </select>
+    </div>
+    <div id="legend">
+        <span>not tracked</span>
+
+        <span class="cov0">not covered</span>
+        <span class="cov8">covered</span>
+
+    </div>
+</div>
+<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package index
+
+import (
+        "encoding/csv"
+        "encoding/json"
+        "fmt"
+        "io"
+        "log"
+        "sync"
+)
+
+type simpleFileData struct {
+        data string
+}
+
+func (f *simpleFileData) ToString() string <span class="cov8" title="1">{
+        return f.data
+}</span>
+
+func (f *simpleFileData) FromString(str string) <span class="cov8" title="1">{
+        f.data = str
+}</span>
+
+func newSimpleFileData(str string) FileData <span class="cov8" title="1">{
+        return &amp;simpleFileData{data: str}
+}</span>
+
+// FromFile with the help of a given decoder reads and decodes the index file and translates it into an index structure
+func (ind *Index) FromFile(decoder Decoder) error <span class="cov8" title="1">{
+
+        dataChannel := make(chan []FileData, 10)
+
+        go func(dataCh &lt;-chan []FileData) </span><span class="cov8" title="1">{
+                for data := range dataCh </span><span class="cov8" title="1">{
+                        var tmp []*FileStruct
+                        if err := json.Unmarshal([]byte(data[1].ToString()), &amp;tmp); err != nil </span><span
+                    class="cov0" title="0">{
+                                log.Println("error", err,
+                                        "msg", fmt.Sprintf("can not parse json data %s \n", data[1].ToString()), "data", )
+                                continue</span>
+                        }
+                        <span class="cov8" title="1">ind.add(data[0].ToString(), tmp)</span>
+                }
+        }(dataChannel)
+
+        <span class="cov8" title="1">return decoder.Decode(dataChannel, func() FileData </span><span class="cov8"
+                                                                                                     title="1">{
+                return &amp;simpleFileData{}
+        }</span>)
+}
+
+// ToFile using the specified encoder saves data to the specified writer
+func (ind *Index) ToFile(encoder Encoder) error <span class="cov8" title="1">{
+
+        dataChannel := make(chan []FileData, 10)
+
+        go func(dataCh chan&lt;- []FileData) </span><span class="cov8" title="1">{
+                for i := range ind.Data </span><span class="cov8" title="1">{
+                        rawData, err := json.Marshal(ind.Data[i])
+                        if err != nil </span><span class="cov0" title="0">{
+                                log.Printf("Error %q while marshalling data %+v", err, ind.Data[i])
+                                continue</span>
+                        }
+                        <span class="cov8" title="1">dataCh &lt;- []FileData{newSimpleFileData(i), newSimpleFileData(string(rawData))}</span>
+                }
+                <span class="cov8" title="1">close(dataCh)</span>
+
+        }(dataChannel)
+
+        <span class="cov8" title="1">return encoder.Encode(dataChannel)</span>
+}
+
+// CsvDecoder structure for reading and decoding csv file index
+type CsvDecoder struct {
+        m      *sync.RWMutex
+        reader io.Reader
+}
+
+// CsvEncoder structure for writing an index to a csv file
+type CsvEncoder struct {
+        m      *sync.RWMutex
+        writer io.Writer
+}
+
+// Encode
+func (c *CsvEncoder) Encode(dataChannel &lt;-chan []FileData) error <span class="cov8" title="1">{
+
+        w := csv.NewWriter(c.writer)
+        defer func() </span><span class="cov8" title="1">{
+                c.m.Lock()
+                w.Flush()
+                c.m.Unlock()
+        }</span>()
+
+        <span class="cov8" title="1">var count int
+        for data := range dataChannel </span><span class="cov8" title="1">{
+
+                var csvData []string
+
+                for i := range data </span><span class="cov8" title="1">{
+                        csvData = append(csvData, data[i].ToString())
+                }</span>
+
+                <span class="cov8" title="1">err := w.Write(csvData)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("can not save record %v \n", csvData)
+                        return err
+                }</span>
+                <span class="cov8" title="1">count++
+                if count &gt; 10 </span><span class="cov8" title="1">{
+                        c.m.Lock()
+                        w.Flush()
+                        c.m.Unlock()
+
+                        log.Println("msg", "flush writer", "writer", w)
+                        count = 0
+                }</span>
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+func (c *CsvDecoder) Decode(dataChannel chan&lt;- []FileData, constructor func() FileData) error <span class="cov8"
+                                                                                                       title="1">{
+        r := csv.NewReader(c.reader)
+        var errCount int
+        defer close(dataChannel)
+
+        for </span><span class="cov8" title="1">{
+                c.m.RLock()
+                record, err := r.Read()
+                c.m.RUnlock()
+
+                if err == io.EOF </span><span class="cov8" title="1">{
+                        break</span>
+                }
+                <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                        log.Println("error", err,
+                                "msg", "can not read csv line")
+                        errCount++
+                        if errCount &gt; 100 </span><span class="cov0" title="0">{
+                                return err
+                        }</span>
+                        <span class="cov0" title="0">continue</span>
+                }
+                <span class="cov8" title="1">log.Println("msg", "reading data from csv", "data", record)
+
+                var rawData []FileData
+
+                for i := range record </span><span class="cov8" title="1">{
+                        d := constructor()
+                        d.FromString(record[i])
+                        rawData = append(rawData, d)
+                }</span>
+                <span class="cov8" title="1">dataChannel &lt;- rawData</span>
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+
+func NewCsvDecoder(reader io.Reader) *CsvDecoder <span class="cov8" title="1">{
+        return &amp;CsvDecoder{m: &amp;sync.RWMutex{}, reader: reader}
+}</span>
+
+func NewCsvEncoder(writer io.Writer) *CsvEncoder <span class="cov8" title="1">{
+        return &amp;CsvEncoder{m: &amp;sync.RWMutex{}, writer: writer}
+}</span>
+
+type Decoder interface {
+        Decode(chan&lt;- []FileData, func() FileData) error
+}
+
+type Encoder interface {
+        Encode(&lt;-chan []FileData) error
+}
+
+type FileData interface {
+        FromString(str string)
+        ToString() string
+}
+</pre>
+
+    <pre class="file" id="file1" style="display: none">package index
+
+import (
+        "bufio"
+        "io"
+        "sync"
+
+        "github.com/polisgo2020/search-senyast4745/util"
+)
+
+type FileStruct struct {
+        File     string `json:"file"`
+        Position []int  `json:"position"`
+}
+
+type FileWordMap map[string]*FileStruct
+
+type Index struct {
+        Data        map[string][]*FileStruct
+        dataChannel chan FileWordMap
+}
+
+func NewIndex() *Index <span class="cov8" title="1">{
+        return &amp;Index{Data: make(map[string][]*FileStruct)}
+}</span>
+
+func (ind *Index) add(word string, data []*FileStruct) <span class="cov8" title="1">{
+        ind.Data[word] = data
+}</span>
+
+func (ind *Index) OpenApplyAndListenChannel(consumer func(wg *sync.WaitGroup)) <span class="cov8" title="1">{
+        ind.dataChannel = make(chan FileWordMap, 1000)
+        var wg sync.WaitGroup
+        consumer(&amp;wg)
+
+        go func(wg *sync.WaitGroup, readChan chan FileWordMap) </span><span class="cov8" title="1">{
+                wg.Wait()
+                close(readChan)
+        }</span>(&amp;wg, ind.dataChannel)
+
+        <span class="cov8" title="1">for data := range ind.dataChannel </span><span class="cov8" title="1">{
+                for j := range data </span><span class="cov8" title="1">{
+                        if ind.Data[j] == nil </span><span class="cov8" title="1">{
+                                ind.Data[j] = []*FileStruct{data[j]}
+                        }</span> else<span class="cov8" title="1"> {
+                                ind.Data[j] = append(ind.Data[j], data[j])
+                        }</span>
+                }
+        }
+}
+
+// MapAndCleanWords creates an inverted index for a given word slice from a given file
+func (ind *Index) MapAndCleanWords(reader io.Reader, fn string) <span class="cov8" title="1">{
+        sc := bufio.NewScanner(reader)
+        sc.Split(bufio.ScanWords)
+
+        var position int
+        data := make(FileWordMap)
+        for sc.Scan() </span><span class="cov8" title="1">{
+                util.CleanUserInput(sc.Text(), func(input string) </span><span class="cov8" title="1">{
+                        if data[input] == nil </span><span class="cov8" title="1">{
+                                data[input] = &amp;FileStruct{File: fn, Position: []int{position}}
+                        }</span> else<span class="cov8" title="1"> {
+                                data[input].Position = append(data[input].Position, position)
+                        }</span>
+                        <span class="cov8" title="1">position++</span>
+                })
+        }
+        <span class="cov8" title="1">ind.dataChannel &lt;- data</span>
+}
+</pre>
+
+    <pre class="file" id="file2" style="display: none">package index
+
+import (
+        "math"
+        "sort"
+
+        "github.com/polisgo2020/search-senyast4745/util"
+)
+
+type Data struct {
+        Weight int
+        Path   int
+}
+
+type dynamicData struct {
+        Path  int
+        DPVar []*dynamicVar
+}
+
+type dynamicVar struct {
+        Position int
+        Weight   int
+}
+
+func makeDynamicVar(pos []int) []*dynamicVar <span class="cov8" title="1">{
+        var t []*dynamicVar
+        for i := range pos </span><span class="cov8" title="1">{
+                t = append(t, &amp;dynamicVar{Position: pos[i]})
+        }</span>
+        <span class="cov8" title="1">return t</span>
+}
+
+// Search sorting Index data by number of occurrences of words and distance between words in the source file
+// use dynamic programming as search algorithm
+func (ind *Index) Search(searchWords []string) map[string]*Data <span class="cov8" title="1">{
+
+        data := make(map[string]*dynamicData)
+        for _, word := range searchWords </span><span class="cov8" title="1">{
+                for _, fileStr := range ind.Data[word] </span><span class="cov8" title="1">{
+                        if data[fileStr.File] == nil </span><span class="cov8" title="1">{
+                                data[fileStr.File] = &amp;dynamicData{DPVar: makeDynamicVar(fileStr.Position)}
+                        }</span> else<span class="cov8" title="1"> {
+                                data[fileStr.File].DPVar = dynamicMinPosition(data[fileStr.File].DPVar, fileStr.Position)
+                        }</span>
+                        <span class="cov8" title="1">data[fileStr.File].Path++</span>
+                }
+        }
+        <span class="cov8" title="1">res := make(map[string]*Data)
+        for s := range data </span><span class="cov8" title="1">{
+                res[s] = transform(data[s])
+        }</span>
+        <span class="cov8" title="1">return res</span>
+}
+
+func dynamicMinPosition(dp []*dynamicVar, pos []int) []*dynamicVar <span class="cov8" title="1">{
+        for v := range dp </span><span class="cov8" title="1">{
+                dp[v].Weight += findMinDiffPos(pos, dp[v].Position)
+        }</span>
+        <span class="cov8" title="1">return dp</span>
+}
+
+func findMinDiffPos(pos []int, key int) int <span class="cov8" title="1">{
+        i := sort.SearchInts(pos, key)
+        var diff int
+        if i == 0 </span><span class="cov8" title="1">{
+                diff = util.Abs(key - pos[i])
+        }</span> else<span class="cov8" title="1"> {
+                if i == len(pos) </span><span class="cov8" title="1">{
+                        diff = util.Abs(key - pos[i-1])
+                }</span> else<span class="cov0" title="0"> {
+                        t := util.Abs(key - pos[i])
+                        k := util.Abs(key - pos[i-1])
+                        if t &lt; k </span><span class="cov0" title="0">{
+                                diff = t
+                        }</span> else<span class="cov0" title="0"> {
+                                diff = k
+                        }</span>
+                }
+        }
+        <span class="cov8" title="1">return diff</span>
+}
+
+func transform(dd *dynamicData) *Data <span class="cov8" title="1">{
+        data := &amp;Data{Path: dd.Path}
+        min := math.MaxInt32
+        for i := range dd.DPVar </span><span class="cov8" title="1">{
+                if dd.DPVar[i].Weight &lt; min </span><span class="cov8" title="1">{
+                        min = dd.DPVar[i].Weight
+                }</span>
+        }
+        <span class="cov8" title="1">data.Weight = min
+        return data</span>
+}
+</pre>
+
+</div>
+</body>
+<script>
+    (function () {
+        var files = document.getElementById('files');
+        var visible;
+        files.addEventListener('change', onChange, false);
+
+        function select(part) {
+            if (visible)
+                visible.style.display = 'none';
+            visible = document.getElementById(part);
+            if (!visible)
+                return;
+            files.value = part;
+            visible.style.display = 'block';
+            location.hash = part;
+        }
+
+        function onChange() {
+            select(files.value);
+            window.scrollTo(0, 0);
+        }
+
+        if (location.hash != "") {
+            select(location.hash.substr(1));
+        }
+        if (!visible) {
+            select("file0");
+        }
+    })();
+</script>
+</html>

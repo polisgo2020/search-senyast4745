@@ -1,0 +1,14 @@
+.todos-list_item {
+    display: flex;
+    border-bottom: 1px solid #E6E6E6;
+}
+
+.todos-list_item:first-child {
+    border-top: 1px solid #E6E6E6;
+    border-bottom: 1px solid #E6E6E6;
+}
+
+.todos-list_item:last-child {
+    margin-bottom: 30px;
+    border-bottom: 1px solid #E6E6E6;
+}

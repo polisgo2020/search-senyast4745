@@ -2,6 +2,7 @@ package util
 
 import "strings"
 
+// EnglishStopWordChecker checks token is english stop word
 func EnglishStopWordChecker(s string) bool {
 	return english[strings.ToLower(s)]
 }

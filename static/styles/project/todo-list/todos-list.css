@@ -1,0 +1,62 @@
+
+.todos-list {
+
+}
+
+.todos-list_item {
+    padding: 16px;
+    border: none;
+}
+
+.todos-list_item:after {
+    content: '';
+    clear: both;
+    display: table;
+}
+
+.todos-list_item:hover {
+    z-index: -1;
+    background: rgba(0, 0, 0, 0.03);
+    cursor: pointer;
+}
+
+.todos-list_item_ready-marker {
+    align-self: center;
+    float: left;
+    margin-right: 16px;
+}
+
+.todos-list_item_text-w {
+    width: 100%;
+    overflow: hidden;
+    padding-right: 20px;
+}
+
+.todos-list_item_text {
+    font-family: 'Work Sans', sans-serif;
+    display: flex !important;
+    padding: 0.8em;
+    font-size: 16px;
+    justify-content: center;
+}
+
+.todos-list_item_text:focus {
+    outline: none;
+}
+
+.todos-list_item_remove {
+    float: right;
+    order: 5;
+    align-self: flex-end;
+
+}
+
+
+.todos-list_item:hover .todos-list_item_remove {
+    visibility: visible;
+}
+
+.todos-list_item_remove:hover {
+    visibility: visible;
+}
+
