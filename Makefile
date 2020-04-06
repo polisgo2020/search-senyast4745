@@ -18,7 +18,7 @@ run_build_file:
 	$(BINARY_NAME) build --sources $(DATA_FOLDER) $(INDEX_FLAG)
 
 run_search:
-		$(BINARY_NAME) search $(INDEX_FLAG) --port 8888
+		$(BINARY_NAME) search $(INDEX_FLAG)
 
 test:
 	go test -v ./index ./util

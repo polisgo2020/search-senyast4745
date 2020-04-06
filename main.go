@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"github.com/polisgo2020/search-senyast4745/config"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -25,7 +28,9 @@ func main() {
 
 	var err error
 
-	log.Println(`
+	initLogger(config.Load())
+
+	log.Print(`
 	 ___ _   ___     ______  _____    _    ____   ____ _   _ 
 	|_ _| \ | \ \   / / ___|| ____|  / \  |  _ \ / ___| | | |
 	 | ||  \| |\ \ / /\___ \|  _|   / _ \ | |_) | |   | |_| |
@@ -54,12 +59,6 @@ func main() {
 		Usage:    "Files to index",
 		Required: true,
 	}
-	portFlag := &cli.StringFlag{
-		Aliases:     []string{"p"},
-		Name:        "port",
-		Usage:       "Network interface",
-		DefaultText: "8888",
-	}
 
 	debugFlag := &cli.BoolFlag{
 		Name:    "debug",
@@ -85,7 +84,6 @@ func main() {
 			Usage:   "Search over the index",
 			Flags: []cli.Flag{
 				indexFileFlag,
-				portFlag,
 				debugFlag,
 			},
 			Action: search,
@@ -94,39 +92,62 @@ func main() {
 
 	err = app.Run(os.Args)
 	if err != nil {
-		log.Printf("Fatal with %q error while starting command line app", err)
+		log.Err(err).Msg("Fatal while starting command line app")
 	}
+}
+
+func initLogger(c *config.Config) {
+	logLvl, err := zerolog.ParseLevel(c.LogLevel)
+	if err != nil {
+		logLvl = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(logLvl)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+}
+
+func logMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		next.ServeHTTP(w, r)
+
+		log.Debug().
+			Str("method", r.Method).
+			Str("remote", r.RemoteAddr).
+			Str("path", r.URL.Path).
+			Int("duration", int(time.Since(start))).
+			Msgf("Called url %s", r.URL.Path)
+	})
+
 }
 
 func build(c *cli.Context) error {
 
-	log.Println("msg", "build run", "index file", c.String("index"),
-		"source folder", c.String("sources"))
+	log.Debug().
+		Str("index file", c.String("index")).
+		Str("source folder", c.String("sources")).
+		Msg("build run")
 
 	if err := checkFlags(c, "index", "sources"); err != nil {
-		log.Println("error", err, "context flags", c.FlagNames(),
-			"msg", "error while checking context")
+		log.Err(err).Strs("context flags", c.FlagNames()).Msg("error while checking context")
 		return nil
 	}
 	if allFiles, err := filePathWalkDir(c.String("sources")); err != nil {
-		log.Println("error", err,
-			"msg", fmt.Sprintf("can not read files list from directory: %s", c.String("sources")))
+		log.Err(err).Str(" directory", c.String("sources")).Msg("can not read files list")
 	} else {
-		log.Println("msg", "folder parsed", "files", fmt.Sprintf("%+v", allFiles))
+		log.Debug().Strs("files", allFiles).Msg("folder parsed")
 
 		m := collectWordData(allFiles)
 
-		log.Println("msg", "index built")
+		log.Debug().Msg("index built")
 		if err := collectAndWriteMap(m, c.String("index")); err != nil {
-			log.Println("error", err,
-				"msg", fmt.Sprintf("can not save data to file with name: %s", c.String("index")))
+			log.Err(err).Str("filename", c.String("index")).Msg("can not save data to file")
 			return nil
 		} else {
-			log.Println("msg", "index saved")
+			log.Debug().Msg("index saved")
 		}
 	}
 
-	log.Println("msg", "done")
+	log.Debug().Msg("build done")
 
 	return nil
 }
@@ -139,15 +160,15 @@ func collectWordData(fileNames []string) *index.Index {
 			wg.Add(1)
 			go readFileByWords(wg, m, fileNames[i])
 		}
-		log.Println("msg", fmt.Sprintf("goroutine count %d", len(fileNames)))
+		log.Debug().Msg(fmt.Sprintf("goroutine count %d", len(fileNames)))
 	})
 
 	return m
 }
 
 func collectAndWriteMap(ind *index.Index, indexFile string) error {
-	log.Println("msg", "writing index to file in csv format", "file", indexFile, "index", ind,
-		"index length", len(ind.Data))
+	log.Info().Str("file", indexFile).Int("index length", len(ind.Data)).
+		Msg("writing index to file in csv format")
 	recordFile, _ := os.Create(indexFile)
 	return ind.ToFile(index.NewCsvEncoder(recordFile))
 }
@@ -160,26 +181,24 @@ type FileResponse struct {
 
 func search(c *cli.Context) error {
 
-	log.Println("msg", "search run", "index file", c.String("index"),
-		"server port", c.String("port"))
+	log.Debug().Str("index file", c.String("index")).Interface("config", config.Load()).
+		Msg("search run")
 
 	if err := checkFlags(c, "index"); err != nil {
-		log.Println("error", err, "context flags", c.FlagNames(),
-			"msg", "error while checking context")
+		log.Err(err).Strs("context flags", c.FlagNames()).Msg("error while checking context")
 		return nil
 	}
 
-	wapp, err := NewApp(c.String("port"))
+	wapp, err := NewApp(config.Load())
 
 	if err != nil {
-		log.Println("error", err, "msg", "error while creating web application")
+		log.Err(err).Msg("error while creating web application")
 		return nil
 	}
 
 	data, err := readCSVFile(c.String("index"))
 	if err != nil {
-		log.Println("error", err,
-			"msg", fmt.Sprintf("Couldn't open or read the csv file %s", c.String("path")))
+		log.Err(err).Str("file", c.String("path")).Msg("Couldn't open or read the csv file ")
 		return nil
 	}
 
@@ -187,17 +206,16 @@ func search(c *cli.Context) error {
 
 	r.Post("/", func(w http.ResponseWriter, req *http.Request) {
 		searchWords := req.FormValue("search")
-		log.Println("msg", searchWords)
+		log.Info().Str("search phrase", searchWords).Msg("start search")
 		var inputWords []string
 		for _, word := range strings.Split(searchWords, " ") {
 			util.CleanUserInput(word, func(input string) {
 				inputWords = append(inputWords, input)
 			})
 		}
-		log.Println("msg", inputWords)
+		log.Debug().Msgf("clean input: %+v", inputWords)
 		if len(inputWords) == 0 {
-			log.Println("error", nil,
-				"msg", "Incorrect search words", "input", c.String("search-words"))
+			log.Err(nil).Str("input", c.String("search-words")).Msg("Incorrect search words")
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
@@ -210,11 +228,11 @@ func search(c *cli.Context) error {
 				Spacing:  v.Weight,
 			})
 		}
-		log.Println("msg", fmt.Sprintf("resp %+v", resp))
+		log.Debug().Msgf(fmt.Sprintf("resp %+v", resp))
 
 		rawData, err := json.Marshal(resp)
 		if err != nil {
-			log.Printf("error %s while marshalling data %+v to json\n", err, resp)
+			log.Err(err).Interface("json data", resp).Msg("error while marshalling data to json")
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 		if _, err = fmt.Fprint(w, string(rawData)); err != nil {
@@ -223,10 +241,10 @@ func search(c *cli.Context) error {
 		}
 	})
 
-	if err := http.ListenAndServe(":"+wapp.Port, r); err != nil {
-		log.Println("error", err)
+	if err := http.ListenAndServe(wapp.Interface, r); err != nil {
+		log.Err(err).Str("network interface", wapp.Interface).Msg("can not start server")
 	}
-
+	log.Debug().Msg("server shutdown")
 	return nil
 }
 
@@ -259,8 +277,7 @@ func readFileByWords(wg *sync.WaitGroup, ind *index.Index, fn string) {
 	defer wg.Done()
 	file, err := os.Open(fn)
 	if err != nil {
-		log.Println("error", err,
-			"msg", fmt.Sprintf("can not open file %s", fn), "filename", fn)
+		log.Err(err).Str("filename", fn).Msg("can't open file")
 		return
 	}
 	//noinspection GoUnhandledErrorResult
@@ -280,14 +297,20 @@ func checkFlags(c *cli.Context, str ...string) error {
 }
 
 type App struct {
-	Mux  *chi.Mux
-	Port string
+	Mux       *chi.Mux
+	Interface string
 }
 
-func NewApp(port string) (*App, error) {
+func NewApp(c *config.Config) (*App, error) {
 	r := chi.NewMux()
-	r.Use(middleware.DefaultLogger)
-	r.Use(middleware.Timeout(100 * time.Millisecond))
+	r.Use(logMiddleware)
+
+	d, err := time.ParseDuration(c.TimeOut)
+	if err != nil {
+		d = 10
+	}
+
+	r.Use(middleware.Timeout(d * time.Millisecond))
 	filesDir := http.Dir("static")
 	corsFilter := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
@@ -299,7 +322,10 @@ func NewApp(port string) (*App, error) {
 	})
 	r.Use(corsFilter.Handler)
 	FileServer(r, "/", filesDir)
-	return &App{Mux: r, Port: port}, nil
+	if c.Listen == "" {
+		c.Listen = "localhost:8888"
+	}
+	return &App{Mux: r, Interface: c.Listen}, nil
 }
 
 func FileServer(r chi.Router, path string, root http.FileSystem) {
