@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/polisgo2020/search-senyast4745/config"
+	"github.com/polisgo2020/search-senyast4745/web"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,9 +16,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/cors"
 	"github.com/urfave/cli/v2"
 
 	"github.com/polisgo2020/search-senyast4745/index"
@@ -30,7 +28,7 @@ func main() {
 
 	initLogger(config.Load())
 
-	log.Print(`
+	log.Info().Msg(`
 	 ___ _   ___     ______  _____    _    ____   ____ _   _ 
 	|_ _| \ | \ \   / / ___|| ____|  / \  |  _ \ / ___| | | |
 	 | ||  \| |\ \ / /\___ \|  _|   / _ \ | |_) | |   | |_| |
@@ -60,12 +58,6 @@ func main() {
 		Required: true,
 	}
 
-	debugFlag := &cli.BoolFlag{
-		Name:    "debug",
-		Aliases: []string{"d"},
-		Usage:   "Turn on debug mode",
-	}
-
 	app.Commands = []*cli.Command{
 		{
 			Name:    "build",
@@ -74,7 +66,6 @@ func main() {
 			Flags: []cli.Flag{
 				indexFileFlag,
 				sourcesFlag,
-				debugFlag,
 			},
 			Action: build,
 		},
@@ -84,7 +75,6 @@ func main() {
 			Usage:   "Search over the index",
 			Flags: []cli.Flag{
 				indexFileFlag,
-				debugFlag,
 			},
 			Action: search,
 		},
@@ -122,6 +112,8 @@ func logMiddleware(next http.Handler) http.Handler {
 
 func build(c *cli.Context) error {
 
+	log.Info().Msg("build mode run")
+
 	log.Debug().
 		Str("index file", c.String("index")).
 		Str("source folder", c.String("sources")).
@@ -138,7 +130,7 @@ func build(c *cli.Context) error {
 
 		m := collectWordData(allFiles)
 
-		log.Debug().Msg("index built")
+		log.Debug().Interface("index", m).Msg("index built")
 		if err := collectAndWriteMap(m, c.String("index")); err != nil {
 			log.Err(err).Str("filename", c.String("index")).Msg("can not save data to file")
 			return nil
@@ -181,6 +173,8 @@ type FileResponse struct {
 
 func search(c *cli.Context) error {
 
+	log.Info().Msg("search mode run")
+
 	log.Debug().Str("index file", c.String("index")).Interface("config", config.Load()).
 		Msg("search run")
 
@@ -189,7 +183,7 @@ func search(c *cli.Context) error {
 		return nil
 	}
 
-	wapp, err := NewApp(config.Load())
+	wapp, err := web.NewApp(config.Load(), logMiddleware)
 
 	if err != nil {
 		log.Err(err).Msg("error while creating web application")
@@ -241,10 +235,7 @@ func search(c *cli.Context) error {
 		}
 	})
 
-	if err := http.ListenAndServe(wapp.Interface, r); err != nil {
-		log.Err(err).Str("network interface", wapp.Interface).Msg("can not start server")
-	}
-	log.Debug().Msg("server shutdown")
+	wapp.Run()
 	return nil
 }
 
@@ -280,7 +271,7 @@ func readFileByWords(wg *sync.WaitGroup, ind *index.Index, fn string) {
 		log.Err(err).Str("filename", fn).Msg("can't open file")
 		return
 	}
-	//noinspection GoUnhandledErrorResult
+
 	defer file.Close()
 
 	ind.MapAndCleanWords(file, fn)
@@ -294,55 +285,4 @@ func checkFlags(c *cli.Context, str ...string) error {
 		}
 	}
 	return nil
-}
-
-type App struct {
-	Mux       *chi.Mux
-	Interface string
-}
-
-func NewApp(c *config.Config) (*App, error) {
-	r := chi.NewMux()
-	r.Use(logMiddleware)
-
-	d, err := time.ParseDuration(c.TimeOut)
-	if err != nil {
-		d = 10
-	}
-
-	r.Use(middleware.Timeout(d * time.Millisecond))
-	filesDir := http.Dir("static")
-	corsFilter := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
-	})
-	r.Use(corsFilter.Handler)
-	FileServer(r, "/", filesDir)
-	if c.Listen == "" {
-		c.Listen = "localhost:8888"
-	}
-	return &App{Mux: r, Interface: c.Listen}, nil
-}
-
-func FileServer(r chi.Router, path string, root http.FileSystem) {
-	if strings.ContainsAny(path, "{}*") {
-		panic("FileServer does not permit any URL parameters.")
-	}
-
-	if path != "/" && path[len(path)-1] != '/' {
-		r.Get(path, http.RedirectHandler(path+"/", 301).ServeHTTP)
-		path += "/"
-	}
-	path += "*"
-
-	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
-		rctx := chi.RouteContext(r.Context())
-		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
-		fs := http.StripPrefix(pathPrefix, http.FileServer(root))
-		fs.ServeHTTP(w, r)
-	})
 }
