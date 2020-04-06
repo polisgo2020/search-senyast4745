@@ -1,0 +1,57 @@
+.todo-creator {
+    padding: 16px 16px;
+
+}
+
+.todo-creator:after {
+    content: '';
+    display: table;
+    clear: both;
+
+}
+
+@media (-webkit-min-device-pixel-ratio: 1.5),
+(min-resolution: 120dpi),
+(min-resolution: 1.5dppx) {
+    .todo-creator_check-all {
+        /*background: url("../images/select-all@2x.png") no-repeat 0 0;*/
+    }
+}
+
+.todo-creator_text-input-w {
+    overflow: hidden;
+    padding-left: 0.2em;
+}
+
+.todo-creator_text-input {
+    border: none;
+    background: none;
+    outline: none;
+    width: 100%;
+
+    font-size: 24px;
+    color: #666;
+    font-weight: 300;
+}
+
+.todo-creator_text-input ::-webkit-input-placeholder {
+    font-style: italic;
+    color: #ccc;
+}
+
+.todo-creator_text-input:-moz-placeholder {
+    font-style: italic;
+    color: #ccc;
+}
+
+.todo-creator_text-input::-moz-placeholder {
+    font-style: italic;
+    color: #ccc;
+}
+
+.todo-creator_text-input:-ms-input-placeholder {
+    font-style: italic;
+    color: #ccc;
+}
+
+
