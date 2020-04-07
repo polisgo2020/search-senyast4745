@@ -2,7 +2,6 @@ package web
 
 import (
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi"
@@ -28,7 +27,7 @@ func NewApp(c *config.Config, middlewares ...func(handler http.Handler) http.Han
 	}
 
 	r.Use(middleware.Timeout(d * time.Millisecond))
-	filesDir := http.Dir("static")
+	//filesDir := http.Dir("static")
 	corsFilter := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -38,14 +37,14 @@ func NewApp(c *config.Config, middlewares ...func(handler http.Handler) http.Han
 		MaxAge:           300,
 	})
 	r.Use(corsFilter.Handler)
-	fileServer(r, "/", filesDir)
+	//fileServer(r, "/", filesDir)
 	if c.Listen == "" {
 		c.Listen = ":8888"
 	}
 	return &App{Mux: r, netInterface: c.Listen}, nil
 }
 
-func fileServer(r chi.Router, path string, root http.FileSystem) {
+/*func fileServer(r chi.Router, path string, root http.FileSystem) {
 	if strings.ContainsAny(path, "{}*") {
 		panic("FileServer does not permit any URL parameters.")
 	}
@@ -57,16 +56,18 @@ func fileServer(r chi.Router, path string, root http.FileSystem) {
 	path += "*"
 
 	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("getting index.html on /")
 		rctx := chi.RouteContext(r.Context())
 		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
 		fs := http.StripPrefix(pathPrefix, http.FileServer(root))
 		fs.ServeHTTP(w, r)
 	})
-}
+}*/
 
 func (a *App) Run() {
-	log.Debug().Msg("server shutdown")
+	log.Info().Str("network interface", a.netInterface).Msg("server start")
 	if err := http.ListenAndServe(a.netInterface, a.Mux); err != nil {
 		log.Err(err).Str("network interface", a.netInterface).Msg("can't start server")
 	}
+	log.Info().Str("network interface", a.netInterface).Msg("server shutdown")
 }

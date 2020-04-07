@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 const formData = new FormData();
                 formData.append("search", text);
                 const createRequest = new XMLHttpRequest();
-                createRequest.open("POST", "http://localhost:8888/");
+                createRequest.open("POST", "http://localhost:80/api");
                 createRequest.send(formData);
                 createRequest.onreadystatechange = function () {
                     if (createRequest.readyState === XMLHttpRequest.DONE) {
