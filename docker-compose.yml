@@ -7,13 +7,29 @@ services:
       - 80:8080
     depends_on:
       - backend
+    links:
+      - backend
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: nginx.log
+
   backend:
     build: .
     ports:
-    - 5000:8080
+    - 8080:8080
     volumes:
       - ./output:/output
     environment:
       - LISTEN=:8080
       - LOG_LEVEL=debug
       - IND_FILE=final.csv
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: backend.log
+
+
+

@@ -91,8 +91,10 @@ func initLogger(c *config.Config) {
 	if err != nil {
 		logLvl = zerolog.InfoLevel
 	}
+	zerolog.TimestampFieldName = "timestamp"
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerolog.SetGlobalLevel(logLvl)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	//log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
 func logMiddleware(next http.Handler) http.Handler {
@@ -102,7 +104,7 @@ func logMiddleware(next http.Handler) http.Handler {
 
 		log.Debug().
 			Str("method", r.Method).
-			Str("remote", r.RemoteAddr).
+			Str("ip", r.RemoteAddr).
 			Str("path", r.URL.Path).
 			Int("duration", int(time.Since(start))).
 			Msgf("Called url %s", r.URL.Path)
@@ -222,8 +224,8 @@ func search(c *cli.Context) error {
 				Spacing:  v.Weight,
 			})
 		}
-		log.Debug().Msgf(fmt.Sprintf("resp %+v", resp))
-
+		log.Info().Interface("result", resp).Msgf("search finished")
+		log.Debug().Msg("start marshalling and writing data to response")
 		rawData, err := json.Marshal(resp)
 		if err != nil {
 			log.Err(err).Interface("json data", resp).Msg("error while marshalling data to json")

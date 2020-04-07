@@ -3,7 +3,6 @@ module github.com/polisgo2020/search-senyast4745
 go 1.13
 
 require (
-	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-chi/chi v4.0.4+incompatible
 	github.com/go-chi/cors v1.0.1
