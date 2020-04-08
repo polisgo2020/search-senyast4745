@@ -46,13 +46,15 @@ docker-compose up -f --build docker-compose-logs.yml
 After you can up search docker-compose:
 
 ```shell script
+mkdir output
+cp /index/file/path ./output
 export LOG_LEVEL=`log-level`
 export IND_FILE=index-file-name
 docker-compose up --build
 ```
 
-> To start the search in docker, you must have the output folder in the same directory as the docker-compose.yml file.
-> Index-file should be in this folder.
+> To start the search in Docker, you must have the **./output** folder in the same directory as the **docker-compose.yml** file.
+> Index file should be in this (**./output**) folder.
 
 You can go in your browser to `localhost` and start searching by web-interface.
 
