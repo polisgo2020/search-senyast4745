@@ -40,7 +40,7 @@ Host: `interfase-to-listen`
 Before all run **Elastic Stack**:
 
 ```shell script
-docker-compose -f docker-compose-logs.yml up -d --build
+docker-compose -f docker-compose-logs.yml up -d
 ```
 
 After you can up search docker-compose:
@@ -50,7 +50,7 @@ mkdir output
 cp /index/file/path ./output
 export LOG_LEVEL=log-level
 export IND_FILE=index-file-name
-docker-compose up --build -d
+docker-compose up -d
 ```
 
 > To start the search in Docker, you must have the **./output** folder in the same directory as the **docker-compose.yml** file.
