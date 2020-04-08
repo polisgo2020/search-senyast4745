@@ -16,10 +16,20 @@ type Config struct {
 
 func Load() *Config {
 	once.Do(func() {
+		var listen, logLevel, timeout string
+		if listen = os.Getenv("LISTEN"); listen == "" {
+			listen = "localhost:8080"
+		}
+		if logLevel = os.Getenv("LOG_LEVEL"); logLevel == "" {
+			logLevel = "info"
+		}
+		if timeout = os.Getenv("TIMEOUT"); timeout == "" {
+			timeout = "1"
+		}
 		instance = &Config{
-			Listen:   os.Getenv("LISTEN"),
-			LogLevel: os.Getenv("LOG_LEVEL"),
-			TimeOut:  os.Getenv("TIMEOUT"),
+			Listen:   listen,
+			LogLevel: logLevel,
+			TimeOut:  timeout,
 		}
 	})
 	return instance

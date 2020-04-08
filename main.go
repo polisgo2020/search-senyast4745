@@ -1,32 +1,29 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/polisgo2020/search-senyast4745/config"
 	"github.com/polisgo2020/search-senyast4745/web"
 	"github.com/urfave/cli/v2"
+	"os"
+	"path/filepath"
+	"sync"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/polisgo2020/search-senyast4745/index"
-	"github.com/polisgo2020/search-senyast4745/util"
 )
 
 func main() {
 
 	var err error
 
-	initLogger(config.Load())
+	if err = initLogger(config.Load()); err != nil {
+		log.Err(err).Msg("can not init logger")
+		return
+	}
 
 	log.Info().Msg(`
 	 ___ _   ___     ______  _____    _    ____   ____ _   _ 
@@ -86,30 +83,15 @@ func main() {
 	}
 }
 
-func initLogger(c *config.Config) {
+func initLogger(c *config.Config) error {
 	logLvl, err := zerolog.ParseLevel(c.LogLevel)
 	if err != nil {
-		logLvl = zerolog.InfoLevel
+		return err
 	}
 	zerolog.TimestampFieldName = "timestamp"
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerolog.SetGlobalLevel(logLvl)
-	//log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-}
-
-func logMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-
-		log.Debug().
-			Str("method", r.Method).
-			Str("ip", r.RemoteAddr).
-			Str("path", r.URL.Path).
-			Int("duration", int(time.Since(start))).
-			Msgf("Called url %s", r.URL.Path)
-	})
-
+	return nil
 }
 
 func build(c *cli.Context) error {
@@ -167,12 +149,6 @@ func collectAndWriteMap(ind *index.Index, indexFile string) error {
 	return ind.ToFile(index.NewCsvEncoder(recordFile))
 }
 
-type FileResponse struct {
-	Filename string
-	Count    int
-	Spacing  int
-}
-
 func search(c *cli.Context) error {
 
 	log.Info().Msg("search mode run")
@@ -185,58 +161,17 @@ func search(c *cli.Context) error {
 		return nil
 	}
 
-	wapp, err := web.NewApp(config.Load(), logMiddleware)
-
-	if err != nil {
-		log.Err(err).Msg("error while creating web application")
-		return nil
-	}
-
 	data, err := readCSVFile(c.String("index"))
 	if err != nil {
 		log.Err(err).Str("file", c.String("path")).Msg("Couldn't open or read the csv file ")
 		return nil
 	}
 
-	r := wapp.Mux
-
-	r.Post("/", func(w http.ResponseWriter, req *http.Request) {
-		searchWords := req.FormValue("search")
-		log.Info().Str("search phrase", searchWords).Msg("start search")
-		var inputWords []string
-		for _, word := range strings.Split(searchWords, " ") {
-			util.CleanUserInput(word, func(input string) {
-				inputWords = append(inputWords, input)
-			})
-		}
-		log.Debug().Msgf("clean input: %+v", inputWords)
-		if len(inputWords) == 0 {
-			log.Err(nil).Str("input", c.String("search-words")).Msg("Incorrect search words")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-
-		var resp []FileResponse
-		for k, v := range data.Search(inputWords) {
-			resp = append(resp, FileResponse{
-				Filename: k,
-				Count:    v.Path,
-				Spacing:  v.Weight,
-			})
-		}
-		log.Info().Interface("result", resp).Msgf("search finished")
-		log.Debug().Msg("start marshalling and writing data to response")
-		rawData, err := json.Marshal(resp)
-		if err != nil {
-			log.Err(err).Interface("json data", resp).Msg("error while marshalling data to json")
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
-		if _, err = fmt.Fprint(w, string(rawData)); err != nil {
-			log.Printf("error %s while writing data %s do json\n", err, string(rawData))
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
-	})
-
+	wapp, err := web.NewApp(config.Load(), data)
+	if err != nil {
+		log.Err(err).Msg("error while creating web application")
+		return nil
+	}
 	wapp.Run()
 	return nil
 }

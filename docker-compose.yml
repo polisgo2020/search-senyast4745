@@ -17,14 +17,16 @@ services:
 
   backend:
     build: .
-    ports:
-    - 8080:8080
-    volumes:
-      - ./output:/output
     environment:
-      - LISTEN=:8080
       - LOG_LEVEL=debug
       - IND_FILE=final.csv
+      - IND_FOLDER=./output
+      - PORT=8080
+      - LISTEN=:${PORT}
+    ports:
+    - 8080:$(PORT)
+    volumes:
+      - ${IND_FOLDER}:/output
     logging:
       driver: "fluentd"
       options:
