@@ -7,4 +7,4 @@ output
 */c.out
 elasticsearch
 kibana
-docker-compose-logs.yml
+docker-compose-logs-secure.yml
