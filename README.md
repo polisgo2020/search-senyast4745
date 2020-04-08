@@ -1,5 +1,6 @@
-# Techopolis Golang homework
-Golang Open Source Homework Repository
+# invindex
+github.com/polisgo2020/search-senyast4745 implements inverted index to perform full-text search.
+
 
 ## Build application
 
