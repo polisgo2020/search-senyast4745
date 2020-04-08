@@ -10,11 +10,11 @@ services:
       - backend
     links:
       - backend
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: localhost:24224
-        tag: nginx.log
+#    logging:
+#      driver: "fluentd"
+#      options:
+#        fluentd-address: localhost:24224
+#        tag: nginx.log
 
   backend:
     build: .
@@ -27,10 +27,10 @@ services:
       - 8080:8080
     volumes:
       - ./output:/output
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: localhost:24224
-        tag: backend.log
+#    logging:
+#      driver: "fluentd"
+#      options:
+#        fluentd-address: localhost:24224
+#        tag: backend.log
 
 

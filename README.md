@@ -37,13 +37,7 @@ Host: `interfase-to-listen`
 
 #### Search in docker
 
-Before all run **Elastic Stack**:
-
-```shell script
-docker-compose -f docker-compose-logs.yml up -d
-```
-
-After you can up search docker-compose:
+You can up invindex in docker-compose:
 
 ```shell script
 mkdir output
@@ -56,6 +50,27 @@ docker-compose up -d
 > To start the search in Docker, you must have the **./output** folder in the same directory as the **docker-compose.yml** file.
 > Index file should be in this (**./output**) folder.
 
-You can go in your browser to `localhost` and start searching by web-interface.
+After it you can go in your browser to [localhost](http://localhost) and start searching by web-interface.
 
-To secure your logs [see it.](http://codingfundas.com/setting-up-elasticsearch-6-8-with-kibana-and-x-pack-security-enabled/index.html)
+#### Add Kibana logs
+
+If you want to use [**Kibana**](https://www.elastic.co/kibana) to view application logs:
+
+* Uncomment in ``docker-compose.yml``:
+```yaml
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: backend.log
+```
+
+* After run **Elastic Stack**:
+
+```shell script
+docker-compose -f docker-compose-logs.yml up -d
+```
+
+* Then repeat the steps from the stage: **"Search in docker"**.
+
+> To secure your logs [see this guide.](http://codingfundas.com/setting-up-elasticsearch-6-8-with-kibana-and-x-pack-security-enabled/index.html)
