@@ -22,18 +22,15 @@ services:
     environment:
       - LOG_LEVEL=debug
       - IND_FILE=final.csv
-      - IND_FOLDER=./output
-      - PORT=8080
-      - LISTEN=:${PORT}
+      - LISTEN=:8080
     ports:
-    - 8080:$(PORT)
+      - 8080:8080
     volumes:
-      - ${IND_FOLDER}:/output
+      - ./output:/output
     logging:
       driver: "fluentd"
       options:
         fluentd-address: localhost:24224
         tag: backend.log
-
 
 
