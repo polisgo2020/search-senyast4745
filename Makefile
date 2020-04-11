@@ -36,8 +36,4 @@ docker_build:
 	docker build -t polisgo2020/senyast4745/invindex:latest .
 
 docker_search:
-	docker run -p 80:8080 \
- 	-e LISTEN=:8080 \
-	-e LOG_LEVEL=debug \
-	-e IND_FILE=final.csv \
- 	--mount type=bind,source="$(shell pwd)"/output,target=/output -d polisgo2020/senyast4745/invindex
+	docker-compose up -d
