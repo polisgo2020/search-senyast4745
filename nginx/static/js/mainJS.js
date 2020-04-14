@@ -12,7 +12,6 @@ function getMeta(metaName) {
             return metas[i].getAttribute('content');
         }
     }
-
     return '';
 }
 
@@ -27,7 +26,6 @@ function isValid(s) {
             return false;
         }
     }
-
     return true;
 }
 
@@ -103,13 +101,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     } else {
                     }
                 };
-
-
             }
         }
-
     });
-
-
-})
-;
+});

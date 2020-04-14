@@ -36,4 +36,4 @@ docker_build:
 	docker build -t polisgo2020/senyast4745/invindex:latest .
 
 docker_search:
-	docker-compose up -d
+	docker-compose up -d --build
