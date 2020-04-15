@@ -8,29 +8,70 @@ services:
       - 80:8080
     depends_on:
       - backend
-    links:
-      - backend
-#    logging:
-#      driver: "fluentd"
-#      options:
-#        fluentd-address: localhost:24224
-#        tag: nginx.log
+  #    logging:
+  #      driver: "fluentd"
+  #      options:
+  #        fluentd-address: localhost:24224
+  #        tag: nginx.log
+
+  building:
+    build:
+      context: .
+      dockerfile: Dockerfile-building
+    image: polisgo2020/search-senyast4745/buildind:latest
+    environment:
+      - LOG_LEVEL=debug
+      - LISTEN=:8080
+      - MONGO_INITDB_DATABASE=invindex
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=test
+      - DB_INTERFACE=mongodb://mongo:27017
+    ports:
+      - 8082:8080
+    volumes:
+      - ./output:/output
+      - ./data:/data
+    depends_on:
+      - mongo
+
 
   backend:
     build: .
-    image: search-senyast4745/search:latest
+    image: polisgo2020/search-senyast4745/searchind:latest
     environment:
       - LOG_LEVEL=debug
-      - IND_FILE=final.csv
       - LISTEN=:8080
+      - MONGO_INITDB_DATABASE=invindex
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=test
+      - DB_INTERFACE=mongodb://mongo:27017
     ports:
       - 8080:8080
     volumes:
       - ./output:/output
-#    logging:
-#      driver: "fluentd"
-#      options:
-#        fluentd-address: localhost:24224
-#        tag: backend.log
+    depends_on:
+      - building
+
+
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      - MONGO_INITDB_DATABASE=invindex
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=test
+#    volumes:
+#      - ./mongo/data:/data/db
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=test
+    depends_on:
+      - mongo
+
 
 

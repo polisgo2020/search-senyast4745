@@ -3,11 +3,12 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/polisgo2020/search-senyast4745/index"
-	"github.com/polisgo2020/search-senyast4745/util"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/polisgo2020/search-senyast4745/index"
+	"github.com/polisgo2020/search-senyast4745/util"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -19,7 +20,6 @@ import (
 type App struct {
 	Mux          *chi.Mux
 	netInterface string
-	Index        *index.Index
 }
 
 type FileResponse struct {
@@ -28,7 +28,7 @@ type FileResponse struct {
 	Spacing  int
 }
 
-func NewApp(c *config.Config, index *index.Index) (*App, error) {
+func NewApp(c *config.Config, getIndex func(...string) (*index.Index, error)) (*App, error) {
 	r := chi.NewMux()
 
 	log.Debug().Msg("add custom log middleware")
@@ -37,12 +37,12 @@ func NewApp(c *config.Config, index *index.Index) (*App, error) {
 	d, err := time.ParseDuration(c.TimeOut)
 	if err != nil {
 		log.Warn().Str("timeout", c.TimeOut).Msg("can not parse timeout")
-		d = 10
+		d = 10 * time.Millisecond
 	}
 
 	log.Debug().Dur("timeout", d).Msg("server timeout")
 
-	r.Use(middleware.Timeout(d * time.Millisecond))
+	r.Use(middleware.Timeout(d))
 
 	corsFilter := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
@@ -76,7 +76,13 @@ func NewApp(c *config.Config, index *index.Index) (*App, error) {
 		}
 
 		var resp []FileResponse
-		for k, v := range index.Search(inputWords) {
+		ind, err := getIndex(inputWords...)
+		if err != nil {
+			log.Err(err).Msg("error while getting index")
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		for k, v := range ind.Search(inputWords) {
 			resp = append(resp, FileResponse{
 				Filename: k,
 				Count:    v.Path,
@@ -89,6 +95,7 @@ func NewApp(c *config.Config, index *index.Index) (*App, error) {
 		if err != nil {
 			log.Err(err).Interface("json data", resp).Msg("error while marshalling data to json")
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
 		}
 		if _, err = fmt.Fprint(w, string(rawData)); err != nil {
 			log.Printf("error %s while writing data %s do json\n", err, string(rawData))
@@ -96,7 +103,7 @@ func NewApp(c *config.Config, index *index.Index) (*App, error) {
 		}
 	})
 
-	return &App{Mux: r, netInterface: c.Listen, Index: index}, nil
+	return &App{Mux: r, netInterface: c.Listen}, nil
 }
 
 func logMiddleware(next http.Handler) http.Handler {

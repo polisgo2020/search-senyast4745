@@ -3,20 +3,26 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/polisgo2020/search-senyast4745/config"
-	"github.com/polisgo2020/search-senyast4745/web"
-	"github.com/urfave/cli/v2"
 	"os"
 	"path/filepath"
 	"sync"
 
+	"github.com/polisgo2020/search-senyast4745/config"
+	"github.com/polisgo2020/search-senyast4745/database"
+	"github.com/polisgo2020/search-senyast4745/web"
+	"github.com/urfave/cli/v2"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/xlab/closer"
 
 	"github.com/polisgo2020/search-senyast4745/index"
 )
 
 func main() {
+
+	defer closer.Close()
 
 	var err error
 
@@ -45,7 +51,7 @@ func main() {
 		Aliases:     []string{"i"},
 		Name:        "index",
 		Usage:       "Index file",
-		DefaultText: "output/final.csv",
+		DefaultText: "",
 	}
 
 	sourcesFlag := &cli.StringFlag{
@@ -103,7 +109,7 @@ func build(c *cli.Context) error {
 		Str("source folder", c.String("sources")).
 		Msg("build run")
 
-	if err := checkFlags(c, "index", "sources"); err != nil {
+	if err := checkFlags(c, "sources"); err != nil {
 		log.Err(err).Strs("context flags", c.FlagNames()).Msg("error while checking context")
 		return nil
 	}
@@ -115,15 +121,34 @@ func build(c *cli.Context) error {
 		m := collectWordData(allFiles)
 
 		log.Debug().Interface("index", m).Msg("index built")
-		if err := collectAndWriteMap(m, c.String("index")); err != nil {
-			log.Err(err).Str("filename", c.String("index")).Msg("can not save data to file")
-			return nil
+
+		if c.String("index") != "" {
+			if err := collectAndWriteMap(m, c.String("index")); err != nil {
+				log.Err(err).Str("filename", c.String("index")).Msg("can not save data to file")
+				return nil
+			} else {
+				log.Debug().Msg("index saved")
+			}
 		} else {
-			log.Debug().Msg("index saved")
+			repo, err := database.NewIndexRepository(config.Load())
+			if err != nil {
+				log.Err(err).Msg("can not open database connection")
+				return nil
+			}
+
+			if err := repo.DropIndex(); err != nil {
+				log.Err(err).Msg("can not drop index connection")
+				return nil
+			}
+
+			if err := repo.SaveIndex(m); err != nil {
+				log.Err(err).Msg("can not save index")
+				return nil
+			}
 		}
 	}
 
-	log.Debug().Msg("build done")
+	log.Info().Msg("build done")
 
 	return nil
 }
@@ -156,21 +181,33 @@ func search(c *cli.Context) error {
 	log.Debug().Str("index file", c.String("index")).Interface("config", config.Load()).
 		Msg("search run")
 
-	if err := checkFlags(c, "index"); err != nil {
-		log.Err(err).Strs("context flags", c.FlagNames()).Msg("error while checking context")
-		return nil
-	}
+	cfg := config.Load()
 
-	data, err := readCSVFile(c.String("index"))
-	if err != nil {
-		log.Err(err).Str("file", c.String("path")).Msg("Couldn't open or read the csv file ")
-		return nil
-	}
+	var wapp *web.App
+	if c.String("index") != "" {
+		data, err := readCSVFile(c.String("index"))
+		if err != nil {
+			log.Err(err).Str("file", c.String("index")).Msg("Couldn't open or read the csv file ")
+			return nil
+		}
 
-	wapp, err := web.NewApp(config.Load(), data)
-	if err != nil {
-		log.Err(err).Msg("error while creating web application")
-		return nil
+		wapp, err = web.NewApp(cfg, func(words ...string) (*index.Index, error) {
+			return data, nil
+		})
+	} else {
+		repo, err := database.NewIndexRepository(cfg)
+		if err != nil {
+			log.Err(err).Msg("Can not open database connection")
+			return nil
+		}
+		wapp, err = web.NewApp(cfg, func(words ...string) (*index.Index, error) {
+			return repo.FindAllByWords(words)
+		})
+
+		if err != nil {
+			log.Err(err).Msg("error while creating web application")
+			return nil
+		}
 	}
 	wapp.Run()
 	return nil

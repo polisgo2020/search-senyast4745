@@ -35,7 +35,7 @@ POST /?search=`search-phrase` HTTP/1.1
 Host: `interfase-to-listen`
 ```
 
-#### Search in docker
+#### Search + building index in docker
 
 You can up invindex in docker-compose:
 
@@ -56,7 +56,7 @@ After it you can go in your browser to [localhost](http://localhost) and start s
 
 If you want to use [**Kibana**](https://www.elastic.co/kibana) to view application logs:
 
-* Uncomment in ``docker-compose.yml``:
+* Add code to `backend`, `building` and `nginx` service in ``docker-compose.yml``:
 ```yaml
     logging:
       driver: "fluentd"
