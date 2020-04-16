@@ -3,10 +3,10 @@ package index
 import (
 	"encoding/csv"
 	"encoding/json"
-	"fmt"
 	"io"
-	"log"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 )
 
 // FromFile with the help of a given decoder reads and decodes the index file and translates it into an index structure
@@ -18,8 +18,7 @@ func (ind *Index) FromFile(decoder Decoder) error {
 		for data := range dataCh {
 			var tmp []*FileStruct
 			if err := json.Unmarshal([]byte(data[1].ToString()), &tmp); err != nil {
-				log.Println("error", err,
-					"msg", fmt.Sprintf("can not parse json data %s \n", data[1].ToString()), "data")
+				log.Err(err).Str("json data", data[1].ToString()).Msg("can not parse json data")
 				continue
 			}
 			ind.add(data[0].ToString(), tmp)
@@ -40,7 +39,7 @@ func (ind *Index) ToFile(encoder Encoder) error {
 		for i := range ind.Data {
 			rawData, err := json.Marshal(ind.Data[i])
 			if err != nil {
-				log.Printf("Error %q while marshalling data %+v", err, ind.Data[i])
+				log.Err(err).Interface("data", ind.Data[i]).Msg("Error while marshalling data")
 				continue
 			}
 			dataCh <- []FileData{newSimpleFileData(i), newSimpleFileData(string(rawData))}
@@ -85,7 +84,7 @@ func (c *CsvEncoder) Encode(dataChannel <-chan []FileData) error {
 
 		err := w.Write(csvData)
 		if err != nil {
-			log.Printf("can not save record %v \n", csvData)
+			log.Warn().Strs("record", csvData).Msg("can not save record")
 			return err
 		}
 		count++
@@ -94,7 +93,7 @@ func (c *CsvEncoder) Encode(dataChannel <-chan []FileData) error {
 			w.Flush()
 			c.m.Unlock()
 
-			log.Println("msg", "flush writer", "writer", w)
+			log.Debug().Interface("writer", w).Msg("flush writer")
 			count = 0
 		}
 	}
@@ -117,15 +116,14 @@ func (c *CsvDecoder) Decode(dataChannel chan<- []FileData, constructor func() Fi
 			break
 		}
 		if err != nil {
-			log.Println("error", err,
-				"msg", "can not read csv line")
+			log.Warn().Interface("error", err).Msg("can not read csv line")
 			errCount++
 			if errCount > 100 {
 				return err
 			}
 			continue
 		}
-		log.Println("msg", "reading data from csv", "data", record)
+		log.Debug().Strs("csv data", record).Msg("reading data from csv")
 
 		var rawData []FileData
 

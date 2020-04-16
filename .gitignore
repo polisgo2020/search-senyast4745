@@ -5,3 +5,6 @@ bin
 logs
 output
 */c.out
+elasticsearch
+kibana
+docker-compose-logs-secure.yml

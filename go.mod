@@ -8,7 +8,7 @@ require (
 	github.com/go-chi/cors v1.0.1
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/reiver/go-porterstemmer v1.0.1
-	github.com/streadway/handy v0.0.0-20190108123426-d5acb3125c2a
+	github.com/rs/zerolog v1.18.0
 	github.com/stretchr/testify v1.4.0
 	github.com/urfave/cli/v2 v2.2.0
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect
