@@ -40,10 +40,11 @@ Host: `interfase-to-listen`
 You can up invindex in docker-compose:
 
 ```shell script
-mkdir data
+mkdir ./data
+mkdir -p ./mongo/data
 cp /data/files/folder ./data
-export LOG_LEVEL=log-level
-export IND_FILE=index-file-name
+export LOG_LEVEL=<log-level>;DATABASE=<your-database-name>
+export DB_USERNAME=<your-database-user>;DB_PASSWORD=<your-database-password>
 docker-compose up -d
 ```
 

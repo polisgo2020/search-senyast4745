@@ -22,9 +22,9 @@ services:
     environment:
       - LOG_LEVEL=debug
       - LISTEN=:8080
-      - MONGO_INITDB_DATABASE=invindex
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=test
+      - DATABASE=${DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
       - DB_INTERFACE=mongodb://mongo:27017
     ports:
       - 8082:8080
@@ -41,9 +41,9 @@ services:
     environment:
       - LOG_LEVEL=debug
       - LISTEN=:8080
-      - MONGO_INITDB_DATABASE=invindex
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=test
+      - DATABASE=${DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
       - DB_INTERFACE=mongodb://mongo:27017
     ports:
       - 8080:8080
@@ -58,10 +58,10 @@ services:
     restart: always
     environment:
       - MONGO_INITDB_DATABASE=invindex
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=test
-#    volumes:
-#      - ./mongo/data:/data/db
+      - MONGO_INITDB_ROOT_USERNAME=${DB_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - ./mongo/data:/data/db
   mongo-express:
     image: mongo-express
     restart: always

@@ -30,13 +30,13 @@ func Load() *Config {
 		if timeout = os.Getenv("TIMEOUT"); timeout == "" {
 			timeout = "10ms"
 		}
-		if user = os.Getenv("MONGO_INITDB_ROOT_USERNAME"); user == "" {
+		if user = os.Getenv("DB_USERNAME"); user == "" {
 			user = "admin"
 		}
-		if db = os.Getenv("MONGO_INITDB_DATABASE"); db == "" {
+		if db = os.Getenv("DATABASE"); db == "" {
 			db = "test"
 		}
-		if passwd = os.Getenv("MONGO_INITDB_ROOT_PASSWORD"); passwd == "" {
+		if passwd = os.Getenv("DB_PASSWORD"); passwd == "" {
 			passwd = ""
 		}
 		if dbListen = os.Getenv("DB_INTERFACE"); dbListen == "" {

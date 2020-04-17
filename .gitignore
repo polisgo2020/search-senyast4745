@@ -9,4 +9,4 @@ elasticsearch
 kibana
 docker-compose-logs-secure.yml
 fluentd
-mongo/data
+mongo
