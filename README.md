@@ -40,15 +40,15 @@ Host: `interfase-to-listen`
 You can up invindex in docker-compose:
 
 ```shell script
-mkdir output
-cp /index/file/path ./output
+mkdir data
+cp /data/files/folder ./data
 export LOG_LEVEL=log-level
 export IND_FILE=index-file-name
 docker-compose up -d
 ```
 
-> To start the search in Docker, you must have the **./output** folder in the same directory as the **docker-compose.yml** file.
-> Index file should be in this (**./output**) folder.
+> To start the build and search in Docker, you must have the **./data** folder in the same directory as the **docker-compose.yml** file.
+> Files to index should be in this (**./data**) folder.
 
 After it you can go in your browser to [localhost](http://localhost) and start searching by web-interface.
 

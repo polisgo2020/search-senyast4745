@@ -11,8 +11,5 @@ RUN GOOS=linux CGO_ENABLED=0 go build -installsuffix cgo -o app main.go
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /app
-ENV IND_FILE final.csv
-RUN mkdir /output
 COPY --from=0 /go/src/github.com/polisgo2020/senyast4745/app .
-COPY ./data ./data
 CMD ./app search
