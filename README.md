@@ -45,6 +45,7 @@ mkdir -p ./mongo/data
 cp /data/files/folder ./data
 export LOG_LEVEL=<log-level>;DATABASE=<your-database-name>
 export DB_USERNAME=<your-database-user>;DB_PASSWORD=<your-database-password>
+export DB_INTERFACE=mongo://<DB_USERNAME>:<DB_PASSWORD>@<your-database-host>
 docker-compose up -d
 ```
 

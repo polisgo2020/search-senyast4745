@@ -85,7 +85,7 @@ func main() {
 
 	err = app.Run(os.Args)
 	if err != nil {
-		log.Err(err).Msg("Fatal while starting command line app")
+		log.Err(err).Msg("fatal while starting command line app")
 	}
 }
 
@@ -178,8 +178,7 @@ func search(c *cli.Context) error {
 
 	log.Info().Msg("search mode run")
 
-	log.Debug().Str("index file", c.String("index")).Interface("config", config.Load()).
-		Msg("search run")
+	log.Debug().Str("index file", c.String("index")).Msg("search run")
 
 	cfg := config.Load()
 
@@ -187,7 +186,7 @@ func search(c *cli.Context) error {
 	if c.String("index") != "" {
 		data, err := readCSVFile(c.String("index"))
 		if err != nil {
-			log.Err(err).Str("file", c.String("index")).Msg("Couldn't open or read the csv file ")
+			log.Err(err).Str("file", c.String("index")).Msg("couldn't open or read the csv file")
 			return nil
 		}
 
@@ -197,7 +196,7 @@ func search(c *cli.Context) error {
 	} else {
 		repo, err := database.NewIndexRepository(cfg)
 		if err != nil {
-			log.Err(err).Msg("Can not open database connection")
+			log.Err(err).Msg("can not open database connection")
 			return nil
 		}
 		wapp, err = web.NewApp(cfg, func(words ...string) (*index.Index, error) {

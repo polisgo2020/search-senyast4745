@@ -15,40 +15,35 @@ services:
   #        tag: nginx.log
 
   building:
-    build:
-      context: .
-      dockerfile: Dockerfile-building
-    image: polisgo2020/search-senyast4745/buildind:latest
-    environment:
-      - LOG_LEVEL=debug
-      - LISTEN=:8080
-      - DATABASE=${DATABASE}
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_INTERFACE=mongodb://mongo:27017
-    ports:
-      - 8082:8080
-    volumes:
-      - ./output:/output
-      - ./data:/data
-    depends_on:
-      - mongo
-
-
-  backend:
     build: .
     image: polisgo2020/search-senyast4745/searchind:latest
     environment:
       - LOG_LEVEL=debug
       - LISTEN=:8080
-      - DATABASE=${DATABASE}
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_INTERFACE=mongodb://mongo:27017
+      - DATABASE
+      - DB_INTERFACE
+    ports:
+      - 8082:8080
+    volumes:
+      - ./output:/output
+      - ./data:/data
+    entrypoint: /app/app build -s /data
+    depends_on:
+      - mongo
+
+
+  backend:
+    image: polisgo2020/search-senyast4745/searchind:latest
+    environment:
+      - LOG_LEVEL=debug
+      - LISTEN=:8080
+      - DATABASE
+      - DB_INTERFACE
     ports:
       - 8080:8080
     volumes:
       - ./output:/output
+    entrypoint: /app/app search
     depends_on:
       - building
 
@@ -57,19 +52,20 @@ services:
     image: mongo
     restart: always
     environment:
-      - MONGO_INITDB_DATABASE=invindex
+      - MONGO_INITDB_DATABASE=${DATABASE}
       - MONGO_INITDB_ROOT_USERNAME=${DB_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD}
     volumes:
       - ./mongo/data:/data/db
+
   mongo-express:
     image: mongo-express
     restart: always
     ports:
       - 8081:8081
     environment:
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=test
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${DB_USERNAME}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${DB_PASSWORD}
     depends_on:
       - mongo
 

@@ -33,18 +33,14 @@ func InitDB(c *config.Config) (*Connection, error) {
 		var client *mongo.Client
 		opt := options.Client()
 		opt.SetConnectTimeout(500 * time.Millisecond)
-		opt.SetAuth(options.Credential{
-			Username: c.DbUser,
-			Password: c.DbPassword,
-		})
+
 		opt.ApplyURI(c.DbListen)
-		log.Debug().Interface("config", c).Interface("options", opt).Msg("start initializing database")
+		log.Debug().Msg("start initializing database")
 		client, err = mongo.NewClient(opt)
 		if err != nil {
 			return
 		}
 
-		log.Debug().Interface("client", client).Msg("start connecting to database")
 		err = client.Connect(context.TODO())
 		if err != nil {
 			return
