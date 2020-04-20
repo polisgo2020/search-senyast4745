@@ -35,7 +35,7 @@ func InitDB(c *config.Config) (*Connection, error) {
 		opt.SetConnectTimeout(500 * time.Millisecond)
 
 		opt.ApplyURI(c.DbListen)
-		log.Debug().Interface("config", c).Msg("start initializing database")
+		log.Info().Interface("config", c).Msg("start initializing database")
 		client, err = mongo.NewClient(opt)
 		if err != nil {
 			return
