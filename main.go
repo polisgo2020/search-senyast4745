@@ -193,6 +193,10 @@ func search(c *cli.Context) error {
 		wapp, err = web.NewApp(cfg, func(words ...string) (*index.Index, error) {
 			return data, nil
 		})
+		if err != nil {
+			log.Err(err).Msg("couldn't start web app")
+			return nil
+		}
 	} else {
 		repo, err := database.NewIndexRepository(cfg)
 		if err != nil {
@@ -248,13 +252,12 @@ func readFileByWords(wg *sync.WaitGroup, ind *index.Index, fn string) {
 	defer file.Close()
 
 	ind.MapAndCleanWords(file, fn)
-	return
 }
 
 func checkFlags(c *cli.Context, str ...string) error {
 	for _, flag := range str {
 		if c.String(flag) == "" {
-			return errors.New(fmt.Sprintf("empty flag %s", flag))
+			return fmt.Errorf("empty flag %s", flag)
 		}
 	}
 	return nil
