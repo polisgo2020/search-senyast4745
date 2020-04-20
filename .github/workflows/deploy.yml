@@ -6,31 +6,31 @@ on:
       - master
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-
-      - name: Set up Go
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.13
-        id: go
-
-      - name: Check out code
-        uses: actions/checkout@v2
-
-      - name: Get dependencies
-        run: go get -v -t -d ./...
-
-      - name: Build
-        run: go build -v .
-
-      - name: Test
-        run: go test -v ./...
-
-      - name: Lint
-        run: go run github.com/golangci/golangci-lint/cmd/golangci-lint run
+#  test:
+#    name: Test
+#    runs-on: ubuntu-latest
+#    steps:
+#
+#      - name: Set up Go
+#        uses: actions/setup-go@v1
+#        with:
+#          go-version: 1.13
+#        id: go
+#
+#      - name: Check out code
+#        uses: actions/checkout@v2
+#
+#      - name: Get dependencies
+#        run: go get -v -t -d ./...
+#
+#      - name: Build
+#        run: go build -v .
+#
+#      - name: Test
+#        run: go test -v ./...
+#
+#      - name: Lint
+#        run: go run github.com/golangci/golangci-lint/cmd/golangci-lint run
 
   push_to_registry:
     name: Push Docker image to GitHub Packages
@@ -54,4 +54,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.KEY }}
           port: 22
-          script: whoami
+          script: |
+            ls -la
+            pwd
+            echo hello world
