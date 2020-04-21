@@ -1,6 +1,7 @@
 # invindex
 github.com/polisgo2020/search-senyast4745 implements inverted index to perform full-text search.
 
+> Test stand address http://ec2-3-19-213-109.us-east-2.compute.amazonaws.com/
 
 ## Build application
 

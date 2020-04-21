@@ -2,7 +2,7 @@ name: Go
 
 on:
   push:
-    branches-ignore:
+    branches:
       - master
 
 jobs:
@@ -55,5 +55,5 @@ jobs:
           key: ${{ secrets.KEY }}
           port: 22
           script: |
-            echo hello world
+            docker pull docker.pkg.github.com/senyast4745/search-senyast4745/search:latest
             docker service update --force search
