@@ -101,6 +101,8 @@ func NewApp(c *config.Config, getIndex func(...string) (*index.Index, error)) (*
 			log.Printf("error %s while writing data %s do json\n", err, string(rawData))
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		log.Debug().Interface("headers", w.Header())
 	})
 
 	return &App{Mux: r, netInterface: c.Listen}, nil
