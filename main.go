@@ -176,7 +176,7 @@ func collectAndWriteMap(ind *index.Index, indexFile string) error {
 
 func search(c *cli.Context) error {
 
-	log.Info().Str("hello", "world").Msg("search mode run")
+	log.Info().Str("test", "Hello world").Msg("search mode run")
 
 	log.Debug().Str("index file", c.String("index")).Msg("search run")
 
