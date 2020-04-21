@@ -31,8 +31,10 @@ type FileResponse struct {
 func NewApp(c *config.Config, getIndex func(...string) (*index.Index, error)) (*App, error) {
 	r := chi.NewMux()
 
-	log.Debug().Msg("add custom log middleware")
+	log.Debug().Msg("add custom log and header middleware")
+
 	r.Use(logMiddleware)
+	r.Use(headerMiddleware)
 
 	d, err := time.ParseDuration(c.TimeOut)
 	if err != nil {
@@ -101,11 +103,18 @@ func NewApp(c *config.Config, getIndex func(...string) (*index.Index, error)) (*
 			log.Printf("error %s while writing data %s do json\n", err, string(rawData))
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+
 		log.Debug().Interface("headers", w.Header())
 	})
-
 	return &App{Mux: r, netInterface: c.Listen}, nil
+}
+
+func headerMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Content-Type", "application/json")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func logMiddleware(next http.Handler) http.Handler {

@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 const formData = new FormData();
                 formData.append("search", text);
                 const createRequest = new XMLHttpRequest();
-                createRequest.open("POST", "http://3.19.213.109:80/api");
+                createRequest.open("POST", "http://ec2-3-19-213-109.us-east-2.compute.amazonaws.com/api");
                 createRequest.send(formData);
                 createRequest.onreadystatechange = function () {
                     if (createRequest.readyState === XMLHttpRequest.DONE) {

@@ -55,6 +55,5 @@ jobs:
           key: ${{ secrets.KEY }}
           port: 22
           script: |
-            ls -la
-            pwd
             echo hello world
+            docker service update --force search
