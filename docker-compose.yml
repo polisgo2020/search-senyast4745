@@ -32,7 +32,7 @@ services:
       - mongo
 
 
-  backend:
+  search:
     image: polisgo2020/search-senyast4745/searchind:latest
     environment:
       - LOG_LEVEL=debug
