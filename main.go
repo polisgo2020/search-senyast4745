@@ -126,9 +126,9 @@ func build(c *cli.Context) error {
 			if err := collectAndWriteMap(m, c.String("index")); err != nil {
 				log.Err(err).Str("filename", c.String("index")).Msg("can not save data to file")
 				return nil
-			} else {
-				log.Debug().Msg("index saved")
 			}
+			log.Info().Msg("index saved")
+
 		} else {
 			repo, err := database.NewIndexRepository(config.Load())
 			if err != nil {
@@ -174,6 +174,22 @@ func collectAndWriteMap(ind *index.Index, indexFile string) error {
 	return ind.ToFile(index.NewCsvEncoder(recordFile))
 }
 
+type DbIndexed struct {
+	repo *database.IndexRepository
+}
+
+func (d *DbIndexed) GetIndex(str ...string) (*index.Index, error) {
+	return d.repo.FindAllByWords(str)
+}
+
+type FileIndexed struct {
+	i *index.Index
+}
+
+func (f *FileIndexed) GetIndex(_ ...string) (*index.Index, error) {
+	return f.i, nil
+}
+
 func search(c *cli.Context) error {
 
 	log.Info().Str("test", "Hello world").Msg("search mode run")
@@ -190,9 +206,7 @@ func search(c *cli.Context) error {
 			return nil
 		}
 
-		wapp, err = web.NewApp(cfg, func(words ...string) (*index.Index, error) {
-			return data, nil
-		})
+		wapp, err = web.NewApp(cfg, &FileIndexed{i: data})
 		if err != nil {
 			log.Err(err).Msg("couldn't start web app")
 			return nil
@@ -203,9 +217,7 @@ func search(c *cli.Context) error {
 			log.Err(err).Msg("can not open database connection")
 			return nil
 		}
-		wapp, err = web.NewApp(cfg, func(words ...string) (*index.Index, error) {
-			return repo.FindAllByWords(words)
-		})
+		wapp, err = web.NewApp(cfg, &DbIndexed{repo: repo})
 
 		if err != nil {
 			log.Err(err).Msg("error while creating web application")

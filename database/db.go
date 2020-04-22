@@ -53,7 +53,6 @@ func InitDB(c *config.Config) (*Connection, error) {
 		}
 		log.Info().Msg("connected to database!")
 		instance = &Connection{client: client}
-		context.TODO()
 
 		closer.Bind(instance.Close)
 
@@ -85,7 +84,7 @@ type Trainer struct {
 }
 
 func TransformIndex(i *index.Index) []IndexDTO {
-	var dto []IndexDTO
+	dto := make([]IndexDTO, 0, len(i.Data))
 	log.Debug().Interface("index", i).Msg("start index transfer")
 	var data IndexDTO
 	for k := range (*i).Data {
@@ -101,8 +100,16 @@ func NewIndexRepository(c *config.Config) (*IndexRepository, error) {
 	if err != nil {
 		return nil, err
 	}
-	col := con.client.Database(database).Collection("index")
-	return &IndexRepository{col: col}, nil
+	col := con.client.Database(database).Collection("indexCol")
+	mod := mongo.IndexModel{
+		Keys: bson.M{
+			"Word": 1,
+		}, Options: options.Index().SetUnique(true),
+	}
+
+	_, err = col.Indexes().CreateOne(context.TODO(), mod)
+
+	return &IndexRepository{col: col}, err
 }
 
 func (rep *IndexRepository) SaveIndex(i *index.Index) error {

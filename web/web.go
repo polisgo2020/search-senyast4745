@@ -28,7 +28,11 @@ type FileResponse struct {
 	Spacing  int
 }
 
-func NewApp(c *config.Config, getIndex func(...string) (*index.Index, error)) (*App, error) {
+type Indexed interface {
+	GetIndex(str ...string) (*index.Index, error)
+}
+
+func NewApp(c *config.Config, i Indexed) (*App, error) {
 	r := chi.NewMux()
 
 	log.Debug().Msg("add custom log and header middleware")
@@ -61,7 +65,12 @@ func NewApp(c *config.Config, getIndex func(...string) (*index.Index, error)) (*
 
 	log.Debug().RawJSON("endpoint", []byte("{\"method\" : \"POST\", \"pattern\" : \"\\\"")).Msg("register controller")
 
-	r.Post("/", func(w http.ResponseWriter, req *http.Request) {
+	r.Post("/", searchHandler(i))
+	return &App{Mux: r, netInterface: c.Listen}, nil
+}
+
+func searchHandler(i Indexed) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
 		searchWords := req.FormValue("search")
 		log.Info().Str("search phrase", searchWords).Msg("start search")
 		var inputWords []string
@@ -78,7 +87,7 @@ func NewApp(c *config.Config, getIndex func(...string) (*index.Index, error)) (*
 		}
 
 		var resp []FileResponse
-		ind, err := getIndex(inputWords...)
+		ind, err := i.GetIndex(inputWords...)
 		if err != nil {
 			log.Err(err).Msg("error while getting index")
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -105,8 +114,7 @@ func NewApp(c *config.Config, getIndex func(...string) (*index.Index, error)) (*
 		}
 
 		log.Debug().Interface("headers", w.Header())
-	})
-	return &App{Mux: r, netInterface: c.Listen}, nil
+	}
 }
 
 func headerMiddleware(next http.Handler) http.Handler {
