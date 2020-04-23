@@ -87,7 +87,7 @@ func TransformIndex(i *index.Index) []IndexDTO {
 	dto := make([]IndexDTO, 0, len(i.Data))
 	log.Debug().Interface("index", i).Msg("start index transfer")
 	var data IndexDTO
-	for k := range (*i).Data {
+	for k := range i.Data {
 		data = IndexDTO{k, i.Data[k]}
 		dto = append(dto, data)
 	}
