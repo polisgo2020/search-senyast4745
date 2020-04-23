@@ -19,6 +19,7 @@ import (
 
 type App struct {
 	Mux          *chi.Mux
+	ind          Indexed
 	netInterface string
 }
 
@@ -65,56 +66,56 @@ func NewApp(c *config.Config, i Indexed) (*App, error) {
 
 	log.Debug().RawJSON("endpoint", []byte("{\"method\" : \"POST\", \"pattern\" : \"\\\"")).Msg("register controller")
 
-	r.Post("/", searchHandler(i))
-	return &App{Mux: r, netInterface: c.Listen}, nil
+	app := &App{Mux: r, netInterface: c.Listen, ind: i}
+
+	r.Post("/", app.searchHandler)
+	return app, nil
 }
 
-func searchHandler(i Indexed) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		searchWords := req.FormValue("search")
-		log.Info().Str("search phrase", searchWords).Msg("start search")
-		var inputWords []string
-		for _, word := range strings.Split(searchWords, " ") {
-			util.CleanUserInput(word, func(input string) {
-				inputWords = append(inputWords, input)
-			})
-		}
-		log.Debug().Msgf("clean input: %+v", inputWords)
-		if len(inputWords) == 0 {
-			log.Err(nil).Str("input", searchWords).Msg("Incorrect search words")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-
-		var resp []FileResponse
-		ind, err := i.GetIndex(inputWords...)
-		if err != nil {
-			log.Err(err).Msg("error while getting index")
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-		for k, v := range ind.Search(inputWords) {
-			resp = append(resp, FileResponse{
-				Filename: k,
-				Count:    v.Path,
-				Spacing:  v.Weight,
-			})
-		}
-		log.Info().Interface("result", resp).Msgf("search finished")
-		log.Debug().Msg("start marshalling and writing data to response")
-		rawData, err := json.Marshal(resp)
-		if err != nil {
-			log.Err(err).Interface("json data", resp).Msg("error while marshalling data to json")
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-		if _, err = fmt.Fprint(w, string(rawData)); err != nil {
-			log.Printf("error %s while writing data %s do json\n", err, string(rawData))
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
-
-		log.Debug().Interface("headers", w.Header())
+func (a *App) searchHandler(w http.ResponseWriter, req *http.Request) {
+	searchWords := req.FormValue("search")
+	log.Info().Str("search phrase", searchWords).Msg("start search")
+	var inputWords []string
+	for _, word := range strings.Split(searchWords, " ") {
+		util.CleanUserInput(word, func(input string) {
+			inputWords = append(inputWords, input)
+		})
 	}
+	log.Debug().Msgf("clean input: %+v", inputWords)
+	if len(inputWords) == 0 {
+		log.Err(nil).Str("input", searchWords).Msg("Incorrect search words")
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	var resp []FileResponse
+	ind, err := a.ind.GetIndex(inputWords...)
+	if err != nil {
+		log.Err(err).Msg("error while getting index")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	for k, v := range ind.Search(inputWords) {
+		resp = append(resp, FileResponse{
+			Filename: k,
+			Count:    v.Path,
+			Spacing:  v.Weight,
+		})
+	}
+	log.Info().Interface("result", resp).Msgf("search finished")
+	log.Debug().Msg("start marshalling and writing data to response")
+	rawData, err := json.Marshal(resp)
+	if err != nil {
+		log.Err(err).Interface("json data", resp).Msg("error while marshalling data to json")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	if _, err = fmt.Fprint(w, string(rawData)); err != nil {
+		log.Printf("error %s while writing data %s do json\n", err, string(rawData))
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	}
+
+	log.Debug().Interface("headers", w.Header())
 }
 
 func headerMiddleware(next http.Handler) http.Handler {
