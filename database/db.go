@@ -70,6 +70,7 @@ func (c *Connection) Close() {
 
 type IndexRepository struct {
 	col *mongo.Collection
+	ctx context.Context
 }
 
 type IndexDTO struct {
@@ -95,7 +96,7 @@ func TransformIndex(i *index.Index) []IndexDTO {
 	return dto
 }
 
-func NewIndexRepository(c *config.Config) (*IndexRepository, error) {
+func NewIndexRepository(c *config.Config, ctx context.Context) (*IndexRepository, error) {
 	con, err := InitDB(c)
 	if err != nil {
 		return nil, err
@@ -107,9 +108,9 @@ func NewIndexRepository(c *config.Config) (*IndexRepository, error) {
 		}, Options: options.Index().SetUnique(true),
 	}
 
-	_, err = col.Indexes().CreateOne(context.TODO(), mod)
+	_, err = col.Indexes().CreateOne(ctx, mod)
 
-	return &IndexRepository{col: col}, err
+	return &IndexRepository{col: col, ctx: ctx}, err
 }
 
 func (rep *IndexRepository) SaveIndex(i *index.Index) error {
@@ -118,19 +119,23 @@ func (rep *IndexRepository) SaveIndex(i *index.Index) error {
 		transfer = append(transfer, v)
 	}
 	log.Debug().Interface("transfer", transfer).Msg("data")
-	_, err := rep.col.InsertMany(context.TODO(), transfer)
+	ctx, cancel := context.WithTimeout(rep.ctx, 10*time.Millisecond)
+	defer cancel()
+	_, err := rep.col.InsertMany(ctx, transfer)
 	return err
 }
 
 func (rep *IndexRepository) FindAllByWords(wordArr []string) (*index.Index, error) {
 	log.Debug().Strs("words", wordArr).Msg("start find by words")
 	filter := bson.M{"word": bson.M{"$in": wordArr}}
-	cursor, err := rep.col.Find(context.TODO(), filter)
+	ctx, cancel := context.WithTimeout(rep.ctx, 15*time.Millisecond)
+	defer cancel()
+	cursor, err := rep.col.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 	i := index.NewIndex()
-	for cursor.Next(context.TODO()) {
+	for cursor.Next(ctx) {
 		var tmp IndexDTO
 		err := cursor.Decode(&tmp)
 		if err != nil {
@@ -144,5 +149,7 @@ func (rep *IndexRepository) FindAllByWords(wordArr []string) (*index.Index, erro
 }
 
 func (rep *IndexRepository) DropIndex() error {
-	return rep.col.Drop(context.TODO())
+	ctx, cancel := context.WithTimeout(rep.ctx, 10*time.Millisecond)
+	defer cancel()
+	return rep.col.Drop(ctx)
 }

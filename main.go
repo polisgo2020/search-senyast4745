@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -130,7 +131,7 @@ func build(c *cli.Context) error {
 			log.Info().Msg("index saved")
 
 		} else {
-			repo, err := database.NewIndexRepository(config.Load())
+			repo, err := database.NewIndexRepository(config.Load(), context.Background())
 			if err != nil {
 				log.Err(err).Msg("can not open database connection")
 				return nil
@@ -212,7 +213,7 @@ func search(c *cli.Context) error {
 			return nil
 		}
 	} else {
-		repo, err := database.NewIndexRepository(cfg)
+		repo, err := database.NewIndexRepository(cfg, context.Background())
 		if err != nil {
 			log.Err(err).Msg("can not open database connection")
 			return nil
