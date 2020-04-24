@@ -78,12 +78,6 @@ type IndexDTO struct {
 	FileStr []*index.FileStruct
 }
 
-type Trainer struct {
-	Name string
-	Age  int
-	City string
-}
-
 func TransformIndex(i *index.Index) []IndexDTO {
 	dto := make([]IndexDTO, 0, len(i.Data))
 	log.Debug().Interface("index", i).Msg("start index transfer")
