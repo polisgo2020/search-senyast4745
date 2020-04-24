@@ -175,14 +175,6 @@ func collectAndWriteMap(ind *index.Index, indexFile string) error {
 	return ind.ToFile(index.NewCsvEncoder(recordFile))
 }
 
-type DbIndexed struct {
-	repo *database.IndexRepository
-}
-
-func (d *DbIndexed) GetIndex(str ...string) (*index.Index, error) {
-	return d.repo.FindAllByWords(str)
-}
-
 type FileIndexed struct {
 	i *index.Index
 }
@@ -218,7 +210,7 @@ func search(c *cli.Context) error {
 			log.Err(err).Msg("can not open database connection")
 			return nil
 		}
-		wapp, err = web.NewApp(cfg, &DbIndexed{repo: repo})
+		wapp, err = web.NewApp(cfg, repo)
 
 		if err != nil {
 			log.Err(err).Msg("error while creating web application")

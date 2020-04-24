@@ -147,3 +147,7 @@ func (rep *IndexRepository) DropIndex() error {
 	defer cancel()
 	return rep.col.Drop(ctx)
 }
+
+func (rep *IndexRepository) GetIndex(str ...string) (*index.Index, error) {
+	return rep.FindAllByWords(str)
+}
