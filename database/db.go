@@ -73,17 +73,17 @@ type IndexRepository struct {
 	ctx context.Context
 }
 
-type IndexDTO struct {
+type indexItem struct {
 	Word    string
 	FileStr []*index.FileStruct
 }
 
-func TransformIndex(i *index.Index) []IndexDTO {
-	dto := make([]IndexDTO, 0, len(i.Data))
+func transformIndex(i *index.Index) []indexItem {
+	dto := make([]indexItem, 0, len(i.Data))
 	log.Debug().Interface("index", i).Msg("start index transfer")
-	var data IndexDTO
+	var data indexItem
 	for k := range i.Data {
-		data = IndexDTO{k, i.Data[k]}
+		data = indexItem{k, i.Data[k]}
 		dto = append(dto, data)
 	}
 	log.Debug().Interface("dto", dto).Msg("dto made")
@@ -109,7 +109,7 @@ func NewIndexRepository(c *config.Config, ctx context.Context) (*IndexRepository
 
 func (rep *IndexRepository) SaveIndex(i *index.Index) error {
 	var transfer []interface{}
-	for _, v := range TransformIndex(i) {
+	for _, v := range transformIndex(i) {
 		transfer = append(transfer, v)
 	}
 	log.Debug().Interface("transfer", transfer).Msg("data")
@@ -130,7 +130,7 @@ func (rep *IndexRepository) FindAllByWords(wordArr []string) (*index.Index, erro
 	}
 	i := index.NewIndex()
 	for cursor.Next(ctx) {
-		var tmp IndexDTO
+		var tmp indexItem
 		err := cursor.Decode(&tmp)
 		if err != nil {
 			return nil, err
