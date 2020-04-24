@@ -1,6 +1,7 @@
 # invindex
 github.com/polisgo2020/search-senyast4745 implements inverted index to perform full-text search.
 
+> Test stand address http://ec2-3-19-213-109.us-east-2.compute.amazonaws.com/
 
 ## Build application
 
@@ -35,20 +36,22 @@ POST /?search=`search-phrase` HTTP/1.1
 Host: `interfase-to-listen`
 ```
 
-#### Search in docker
+#### Search + building index in docker
 
 You can up invindex in docker-compose:
 
 ```shell script
-mkdir output
-cp /index/file/path ./output
-export LOG_LEVEL=log-level
-export IND_FILE=index-file-name
+mkdir ./data
+mkdir -p ./mongo/data
+cp /data/files/folder ./data
+export LOG_LEVEL=<log-level>;DATABASE=<your-database-name>
+export DB_USERNAME=<your-database-user>;DB_PASSWORD=<your-database-password>
+export DB_INTERFACE=mongo://<DB_USERNAME>:<DB_PASSWORD>@<your-database-host>
 docker-compose up -d
 ```
 
-> To start the search in Docker, you must have the **./output** folder in the same directory as the **docker-compose.yml** file.
-> Index file should be in this (**./output**) folder.
+> To start the build and search in Docker, you must have the **./data** folder in the same directory as the **docker-compose.yml** file.
+> Files to index should be in this (**./data**) folder.
 
 After it you can go in your browser to [localhost](http://localhost) and start searching by web-interface.
 
@@ -56,7 +59,7 @@ After it you can go in your browser to [localhost](http://localhost) and start s
 
 If you want to use [**Kibana**](https://www.elastic.co/kibana) to view application logs:
 
-* Uncomment in ``docker-compose.yml``:
+* Add code to `backend`, `building` and `nginx` service in ``docker-compose.yml``:
 ```yaml
     logging:
       driver: "fluentd"

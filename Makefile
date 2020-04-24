@@ -18,7 +18,7 @@ run_build_file:
 	$(BINARY_NAME) build --sources $(DATA_FOLDER) $(INDEX_FLAG)
 
 run_search:
-		$(BINARY_NAME) search $(INDEX_FLAG)
+	$(BINARY_NAME) search $(INDEX_FLAG)
 
 test:
 	go test -v ./index ./util
@@ -32,8 +32,6 @@ report:
 	go tool cover -html=cover.out -o ./reports/util-report.html
 	rm cover.out
 
-docker_build:
-	docker build -t polisgo2020/senyast4745/invindex:latest .
-
-docker_search:
+docker_run:
 	docker-compose up -d --build
+	docker-compose logs -f
