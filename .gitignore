@@ -14,3 +14,5 @@ fluentd
 */c.out
 
 docker-compose-logs-secure.yml
+fluentd
+mongo

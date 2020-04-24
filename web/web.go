@@ -3,11 +3,12 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/polisgo2020/search-senyast4745/index"
-	"github.com/polisgo2020/search-senyast4745/util"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/polisgo2020/search-senyast4745/index"
+	"github.com/polisgo2020/search-senyast4745/util"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -18,8 +19,8 @@ import (
 
 type App struct {
 	Mux          *chi.Mux
+	ind          Indexed
 	netInterface string
-	Index        *index.Index
 }
 
 type FileResponse struct {
@@ -28,21 +29,27 @@ type FileResponse struct {
 	Spacing  int
 }
 
-func NewApp(c *config.Config, index *index.Index) (*App, error) {
+type Indexed interface {
+	GetIndex(str ...string) (*index.Index, error)
+}
+
+func NewApp(c *config.Config, i Indexed) (*App, error) {
 	r := chi.NewMux()
 
-	log.Debug().Msg("add custom log middleware")
+	log.Debug().Msg("add custom log and header middleware")
+
 	r.Use(logMiddleware)
+	r.Use(headerMiddleware)
 
 	d, err := time.ParseDuration(c.TimeOut)
 	if err != nil {
 		log.Warn().Str("timeout", c.TimeOut).Msg("can not parse timeout")
-		d = 10
+		d = 10 * time.Millisecond
 	}
 
 	log.Debug().Dur("timeout", d).Msg("server timeout")
 
-	r.Use(middleware.Timeout(d * time.Millisecond))
+	r.Use(middleware.Timeout(d))
 
 	corsFilter := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
@@ -59,44 +66,64 @@ func NewApp(c *config.Config, index *index.Index) (*App, error) {
 
 	log.Debug().RawJSON("endpoint", []byte("{\"method\" : \"POST\", \"pattern\" : \"\\\"")).Msg("register controller")
 
-	r.Post("/", func(w http.ResponseWriter, req *http.Request) {
-		searchWords := req.FormValue("search")
-		log.Info().Str("search phrase", searchWords).Msg("start search")
-		var inputWords []string
-		for _, word := range strings.Split(searchWords, " ") {
-			util.CleanUserInput(word, func(input string) {
-				inputWords = append(inputWords, input)
-			})
-		}
-		log.Debug().Msgf("clean input: %+v", inputWords)
-		if len(inputWords) == 0 {
-			log.Err(nil).Str("input", searchWords).Msg("Incorrect search words")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
+	app := &App{Mux: r, netInterface: c.Listen, ind: i}
 
-		var resp []FileResponse
-		for k, v := range index.Search(inputWords) {
-			resp = append(resp, FileResponse{
-				Filename: k,
-				Count:    v.Path,
-				Spacing:  v.Weight,
-			})
-		}
-		log.Info().Interface("result", resp).Msgf("search finished")
-		log.Debug().Msg("start marshalling and writing data to response")
-		rawData, err := json.Marshal(resp)
-		if err != nil {
-			log.Err(err).Interface("json data", resp).Msg("error while marshalling data to json")
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
-		if _, err = fmt.Fprint(w, string(rawData)); err != nil {
-			log.Printf("error %s while writing data %s do json\n", err, string(rawData))
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
+	r.Post("/", app.searchHandler)
+	return app, nil
+}
+
+func (a *App) searchHandler(w http.ResponseWriter, req *http.Request) {
+	searchWords := req.FormValue("search")
+	log.Info().Str("search phrase", searchWords).Msg("start search")
+	var inputWords []string
+	for _, word := range strings.Split(searchWords, " ") {
+		util.CleanUserInput(word, func(input string) {
+			inputWords = append(inputWords, input)
+		})
+	}
+	log.Debug().Msgf("clean input: %+v", inputWords)
+	if len(inputWords) == 0 {
+		log.Err(nil).Str("input", searchWords).Msg("Incorrect search words")
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	var resp []FileResponse
+	ind, err := a.ind.GetIndex(inputWords...)
+	if err != nil {
+		log.Err(err).Msg("error while getting index")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	for k, v := range ind.Search(inputWords) {
+		resp = append(resp, FileResponse{
+			Filename: k,
+			Count:    v.Path,
+			Spacing:  v.Weight,
+		})
+	}
+	log.Info().Interface("result", resp).Msgf("search finished")
+	log.Debug().Msg("start marshalling and writing data to response")
+	rawData, err := json.Marshal(resp)
+	if err != nil {
+		log.Err(err).Interface("json data", resp).Msg("error while marshalling data to json")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	if _, err = fmt.Fprint(w, string(rawData)); err != nil {
+		log.Printf("error %s while writing data %s do json\n", err, string(rawData))
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	}
+
+	log.Debug().Interface("headers", w.Header())
+}
+
+func headerMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Content-Type", "application/json")
+		next.ServeHTTP(w, r)
 	})
-
-	return &App{Mux: r, netInterface: c.Listen, Index: index}, nil
 }
 
 func logMiddleware(next http.Handler) http.Handler {

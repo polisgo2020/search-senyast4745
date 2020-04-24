@@ -1,20 +1,5 @@
 console.log('init');
 
-const token = getMeta("_csrf");
-const header = getMeta("_csrf_header");
-
-function getMeta(metaName) {
-    const metas = document.getElementsByTagName('meta');
-
-    for (let i = 0; i < metas.length; i++) {
-        if (metas[i].getAttribute('name') === metaName) {
-            console.log(metas[i].getAttribute('content'));
-            return metas[i].getAttribute('content');
-        }
-    }
-    return '';
-}
-
 function isValid(s) {
     if (s.length > 50) {
         return false;
@@ -77,7 +62,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 const formData = new FormData();
                 formData.append("search", text);
                 const createRequest = new XMLHttpRequest();
-                createRequest.open("POST", "http://localhost:80/api");
+                createRequest.open("POST", "http://ec2-3-19-213-109.us-east-2.compute.amazonaws.com/api");
                 createRequest.send(formData);
                 createRequest.onreadystatechange = function () {
                     if (createRequest.readyState === XMLHttpRequest.DONE) {
