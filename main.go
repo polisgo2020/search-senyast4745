@@ -131,18 +131,18 @@ func build(c *cli.Context) error {
 			log.Info().Msg("index saved")
 
 		} else {
-			repo, err := database.NewIndexRepository(config.Load(), context.Background())
+			repo, err := database.NewIndexRepository(context.Background(), config.Load())
 			if err != nil {
 				log.Err(err).Msg("can not open database connection")
 				return nil
 			}
 
-			if err := repo.DropIndex(); err != nil {
+			if err := repo.DropIndex(context.Background()); err != nil {
 				log.Err(err).Msg("can not drop index connection")
 				return nil
 			}
 
-			if err := repo.SaveIndex(m); err != nil {
+			if err := repo.SaveIndex(context.Background(), m); err != nil {
 				log.Err(err).Msg("can not save index")
 				return nil
 			}
@@ -205,7 +205,7 @@ func search(c *cli.Context) error {
 			return nil
 		}
 	} else {
-		repo, err := database.NewIndexRepository(cfg, context.Background())
+		repo, err := database.NewIndexRepository(context.Background(), cfg)
 		if err != nil {
 			log.Err(err).Msg("can not open database connection")
 			return nil

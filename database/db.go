@@ -70,7 +70,6 @@ func (c *Connection) Close() {
 
 type IndexRepository struct {
 	col *mongo.Collection
-	ctx context.Context
 }
 
 type indexItem struct {
@@ -90,7 +89,7 @@ func transformIndex(i *index.Index) []indexItem {
 	return dto
 }
 
-func NewIndexRepository(c *config.Config, ctx context.Context) (*IndexRepository, error) {
+func NewIndexRepository(ctx context.Context, c *config.Config) (*IndexRepository, error) {
 	con, err := InitDB(c)
 	if err != nil {
 		return nil, err
@@ -104,25 +103,25 @@ func NewIndexRepository(c *config.Config, ctx context.Context) (*IndexRepository
 
 	_, err = col.Indexes().CreateOne(ctx, mod)
 
-	return &IndexRepository{col: col, ctx: ctx}, err
+	return &IndexRepository{col: col}, err
 }
 
-func (rep *IndexRepository) SaveIndex(i *index.Index) error {
+func (rep *IndexRepository) SaveIndex(ctx context.Context, i *index.Index) error {
 	var transfer []interface{}
 	for _, v := range transformIndex(i) {
 		transfer = append(transfer, v)
 	}
 	log.Debug().Interface("transfer", transfer).Msg("data")
-	ctx, cancel := context.WithTimeout(rep.ctx, 10*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
 	defer cancel()
 	_, err := rep.col.InsertMany(ctx, transfer)
 	return err
 }
 
-func (rep *IndexRepository) FindAllByWords(wordArr []string) (*index.Index, error) {
+func (rep *IndexRepository) FindAllByWords(ctx context.Context, wordArr []string) (*index.Index, error) {
 	log.Debug().Strs("words", wordArr).Msg("start find by words")
 	filter := bson.M{"word": bson.M{"$in": wordArr}}
-	ctx, cancel := context.WithTimeout(rep.ctx, 15*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Millisecond)
 	defer cancel()
 	cursor, err := rep.col.Find(ctx, filter)
 	if err != nil {
@@ -142,12 +141,12 @@ func (rep *IndexRepository) FindAllByWords(wordArr []string) (*index.Index, erro
 	return i, nil
 }
 
-func (rep *IndexRepository) DropIndex() error {
-	ctx, cancel := context.WithTimeout(rep.ctx, 10*time.Millisecond)
+func (rep *IndexRepository) DropIndex(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
 	defer cancel()
 	return rep.col.Drop(ctx)
 }
 
 func (rep *IndexRepository) GetIndex(str ...string) (*index.Index, error) {
-	return rep.FindAllByWords(str)
+	return rep.FindAllByWords(context.Background(), str)
 }
